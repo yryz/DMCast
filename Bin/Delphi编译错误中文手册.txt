@@ -1,0 +1,765 @@
+*******************************
+* 编 译 错 误 信 息 *
+******************************* 
+
+';' not allowed before 'ELSE' ElSE前不允许有“;”
+'<clause>' clause not allowed in OLE automation section 在OLE自动区段不允许“<clause>”子句
+'<name>' is not a type identifier <name>不是类型标识符
+'<name>' not previously declared as a PROPERTY <name>前面没有说明PROPERTY
+'GOTO <label>' leads into or out of TRY statement GOTO <label>进入或超出TRY语句的范围
+<clause1> clause expected, but <clause2> found 要求子句<clause1>，但出现<clause2>
+16-Bit fixup encountered in object file '<text>' 在对象文件<text>遇到16位修复
+486/487 instructions not enabled 不能用486/487指令
+Abstract methods must be virtual or dynamic 抽象方法必须为虚拟的或动态的
+Array type required 需要数组类型
+Assignment to FOR-Loop variable '<Name>' 给FOR循环变量<Name>赋值
+Bad argument type in variable type array constructor 在变量类型数组结构中不正确的参数类型
+Bad file format '<name>' 错误的文件格式<name>
+Bad file format: <Filename> 错误的文件格式<Filename>
+Bad global symbol definition: '<Name>' in object file '<Filename>' 对象文件'<Filename>'中错误的全局符号定义'<Name>'
+Bad unit format: <Filename> 错误的单元格式<Filename>
+BREAK or CONTINUE outside of loop BREAK或CONTINUE超出循环
+Cannot add or subtract relocatable symbols 不能增加或减少可重置的符号
+Cannot assign to a read-only property 不能指定只读属性
+Cannot BREAK, CONTINUE or EXIT out of a FINALLY clause 超出FINALLY子句的范围，不能使用BREAK,CONTINUE或EXIT语句
+Cannot initialize local variables 不能初始化局部变量
+Cannot initialize multiple variables 不能初始化多个变量
+Cannot initialize thread local variables 不能初始化线程局部变量
+Cannot override a static method 不能覆盖静态方法
+Cannot read a write-only property 不能读取只写属性
+Case label outside of range of case expression CASE标号超出了CASE表达式的范围
+Circular unit reference to <Unitname> 对单元<Unitname>循环引用
+Class already has a default property 类已具有默认的属性
+Class does not have a default property 类没有默认的属性
+Class or object types only allowed in type section 在类型区段只允许有类或对象类型
+Class type required 需要类类型
+Close error on <Filename> 文件<Filename>关闭错误
+Compile terminated by user 用户中止编译
+Constant expected 要求常量
+Constant expression expected 要求常量表达式
+Constant expression violates subrange bounds 常量表达式超出子界范围
+Constant object cannot be passed as var parameter 常量对象不能作为变量参数传递
+Constant or type identifier expected 要求常量或类型标识符
+Constants cannot be used as open array arguments 常量不能用作打开数组参数
+Constructing instance of '<name>' containing abstract methods 构造的<name>实体包含抽象的方法
+Could not compile used unit '<Unitname>' 不能用单元<Unitname>编译
+Could not create output file <Filename> 不能建立输出文件<Filename>
+Could not load RLINK32.DLL 不能加载RLINK32.DLL
+Data type too large: exceeds 2 GB 数据类型太大：超过2GB
+Declaration of <Name> differs from previous declaration <Name>的说明与先前的说明不同
+Default property must be an array property 默认的属性必须为数组属性
+Default values must be of ordinal, pointer or small set type 默认的值必须为序数、指针或小集类型
+Destination cannot be assigned to 目标不能指定
+Destination is inaccessible 目标不能存取
+Dispid '<number>' already used by '<name>' DISPID标识号已被<name>使用
+Dispid clause only allowed in OLE automation section DISPID子句只能在OLE自动区段中使用
+Division by zero 除数为零
+Duplicate case label CASE标号重复
+Duplicate tag value 重复的标志值
+Dynamic method or message handler not allowed here 这里不允许有动态方法或信息处理程序
+Dynamic methods and message handlers not allowed in OLE automation section在OLE自动区段不允许有动态方法或消息处理程序
+Element 0 inaccessible - use 'Length' or 'SetLength' 元素0不能存取-使用LENGTH或SETLENGTH
+Error in numeric constant 数值常量错误
+EXCEPT or FINALLY expected 要求EXCEPT或FINALLY
+EXPORTS allowed only at global scope EXPORTS只允许在全局范围使用
+Expression has no value 表达式没有值
+Expression too complicated 表达式太复杂
+Field definition not allowed in OLE automation section 在OLE自动区段中不允许域定义
+Field definition not allowed after methods or properties 在方法或属性后不允许域定义
+Field or method identifier expected 要求域或方法标识符
+File not found: <Filename> 文件<Filename>没有找到
+File type not allowed here 这儿不允许文件类型
+For loop control variable must be simple local variable FOR循环控制变量必须为简单局部变量
+For loop control variable must have ordinal type FOR循环控制变量必须为序数类型
+FOR or WHILE loop executes zero times - deleted FOR或WHILE循环执行零次-删除
+FOR-Loop variable '<name>' cannot be passed as var parameter FOR循环变量<name>不能作为参数传递
+FOR-Loop variable '<Name>' may be undefined after loop 在循环后的FOR循环变量<NAME>是不确定的
+Function needs result type 函数需要结果类型
+Identifier redeclared: '<name>' 标识符<name>重复说明
+Illegal character in input file: '<char>' (＄<hex>) 在输入文件中的非法字符'<char>'
+Illegal message method index 非法的消息方法指针
+Illegal reference to symbol '<Name>' in object file '<Filename>' 在对象文件<filename>中对符号<name>的非法引用
+Illegal type in OLE automation section: '<typename>' 在OLE自动区段中的非法类型<typename>
+Illegal type in Read/Readln statement 在Read/Readln语句中的非法类型
+Illegal type in Write/Writeln statement 在Write/Writeln语句中的非法类型
+Inaccessible value 不可存取的值
+Incompatible types: '<name>' and '<name>' 不兼容的类型<name>和<name>
+Incompatible types: <text> 不兼容的类型<text>
+Inline assembler stack overflow 内联汇编溢出
+Inline assembler syntax error 内联汇编语法错误
+Instance variable '<name>' inaccessible here 实体变量<name>在这里不能存取
+Integer constant or variable name expected 要求整形常量或变量名
+Integer constant too large 整型常量太大
+Internal error: <ErrorCode> 内部错误<errorcode>
+Invalid combination of opcode and operands 操作码与操作对象的无效组合
+Invalid compiler directive: '<Directive>' 无效的编译指令<DIRECTIVE>
+Invalid function result type 无效的函数值类型
+Invalid message parameter list 无效的消息参数列表
+Invalid register combination 无效的寄存器组合
+Invalid typecast 无效的TYPECASE
+Label '<Name>' is not declared in current procedure 在当前的过程中没有说明标号<NAME>
+Label already defined: '<Labelname>' 标号<LABELNAME>已经定义
+Label declaration not allowed in interface part 在界面部分不允许标号说明
+Label declared and referenced, but not set: '<label>' 标号被<label>说明及引用,但不能设置
+Label expected 要求标号
+Left side cannot be assigned to 左边不能赋值
+Line too long (more than 255 characters) 行太长(超出255个字符)
+Local class or object types not allowed 不允许局部的类或对象类型
+Local procedure/function '<Name>' assigned to procedure variable 局部过程/函数<NAME>赋给过程变量
+LOOP/JCXZ distance out of range LOOP/JCXZ距离超出范围
+Low bound exceeds high bound 下界超过上界
+Memory reference expected 要求内存引用
+Method '<name>' hides virtual method of base type '<name>' 方法<NAME>隐藏了基类型为<NAME>的虚拟方法
+Method '<name>' not found in base class 在基类中没有找到方法<NAME>
+Method identifier expected 要求方法标识符
+Missing ENDIF directive 缺少ENDIF指令
+Missing operator or semicolon 缺少操作符或分号
+Missing or invalid conditional symbol in '＄<symbol>' directive 在＄<symbol>指令中缺少或无效的条件符号
+Missing parameter type 缺少参数类型
+Necessary library helper function was eliminated by linker 必要的库帮助函数被连接程序删除
+No definition for abstract method '<name>' allowed 抽象方法<NAME>没有定义
+Not enough actual parameters 没有足够的实际参数
+Number of elements differs from declaration 元素数与说明不同
+Numeric overflow 数值溢出
+Object or class type required 需要对象或类类型
+Object type required 需要对象类型
+Only register calling convention allowed in OLE automation section 在OLE自动区段中只允许寄存器调用约定
+Operand size mismatch 运算对象大小匹配
+Operator not applicable to this operand type 运算符不使用于这一运算对象类型
+Order of fields in record constant differs from declaration 在记录常量中的域次序与说明不同
+Ordinal type required 需要序数类型
+Out of memory 内存溢出
+Overflow in conversion or arithmetic operation 转换或算术操作溢出
+Overriding automated virtual method '<name>' cannot specify a dispid 覆盖的自动虚拟方法<NAME>不能指定DISPID
+PACKED not allowed here 这里不允许PACKED
+Pointer type required 需要指针类型
+Procedure cannot have a result type 过程不能有结果类型
+Procedure DISPOSE needs destructor 过程DISPOSE需要destructor
+Procedure FAIL only allowed in constructor 过程FAIL只允许在constructor方法中
+Procedure NEW needs constructor 过程NEW需要constructor方法
+PROCEDURE or FUNCTION expected 要求PROCEDURE或FUNCTION
+Procedure or function name expected 要求过程或函数名
+Program or unit '<name>' recursively uses itself 程序或单元递归
+Property '<name>' does not exist in base class 在基类中<NAME>属性不存在
+Published property '<name>' cannot be of type <type> Published属性<NAME>不能具有类型<type>
+Published Real48 property '<name>' must be Single, Double or Extended Published REAL属性<NAME>必须为Single, Double或Extended
+Re-raising an exception only allowed in exception handler 在意外处理中只允许重新引起意外处理
+Read error on <Filename> 文件<FILENAME>读出错
+Record, object or class type required 需要记录,对象或类类型
+Redeclaration of '<name>' hides a member in the base class <NAME>的重新说明隐藏了基类中一个元素
+Redeclaration of property not allowed in OLE automation section 在OLE自动区段中不允许属性重复说明
+Return value of function '<Functionname>' might be undefined 函数<Functionname>的返回值可能没有定义
+Seek error on <Filename> 在<FILENAME>中搜索错误
+Segment/Offset pairs not supported in Borland 32-bit Pascal 在Borland 32位的PASCAL中不支持Segment/Offset对
+Sets may have at most 256 elements 集至少有256个元素
+Size of published set '<name>' is >32 bits published集<NAME>的大小大于32字节
+Slice standard function only allowed as open array argument Slice标准函数只允许作为打开数组参数
+Statement expected, but expression of type '<type>' found 要求语句,但出现类型<TYPE>的表达式
+Statements not allowed in interface part 在界面中不允许的语句
+String constant too long 字符串常量太长
+String constant truncated to fit STRING[<number>] 字符串常量截取到适合STRING[<number>]
+Strings may have at most 255 elements 字符串至少255个元素
+Structure field identifier expected 要求结构域标识符
+Syntax error in real number 实数语法错误
+System unit out of date or corrupted: missing '<name>' 系统单元超出日期或损坏:缺少<NAME>
+Text after final 'END. 编译器忽略END.后的文本
+This form of method call only allowed for class methods 该方法的窗体只允许类方法
+This form of method call only allowed in methods of derived types 该方法的窗体只允许在导出类型的方法中
+This type cannot be initialized 这一类型不能初始化
+Thread local variables cannot be ABSOLUTE 线程局部变量不能是ABSOLUTE
+Thread local variables cannot be local to a function or procedure 线程局部变量对函数不能是局部的
+Too many actual parameters 太多的实际参数
+Too many conditional symbols 太多的条件符号
+Type '<name>' has no type info 类型<NAME>没有类型信息
+Type '<Name>' is not yet completely defined 类型<NAME>至今没有定义
+Type '<name>' must be a class to have a PUBLISHED section 类型<NAME>必须是在PUBLISHED区段中的类
+Type '<name>' must be a class to have OLE automation 类型<NAME>必须是具有OLE自动的类
+Type '<name>' needs finalization - not allowed in file type 类型<NAME>需要初始化-不允许在文件类型中
+Type '<name>' needs finalization - not allowed in variant record 类型<NAME>需要初始化-不允许在变体记录
+Type expected 要求TYPE
+Type not allowed in OLE Automation call 在OLE自动调用中不允许的类型
+Type of expression must be BOOLEAN 表达式的类型必须为BOOLEAN型
+Type of expression must be INTEGER 表达式的类型必须为INTEGER型
+TYPEINFO standard function expects a type identifier TYPEINFO标准函数要求类型标识符
+TYPEOF can only be applied to object types with a VMT TYPEOF只能用于具有VMT的对象类型
+Types of actual and formal var parameters must be identical 形参与实参必须一致
+Undeclared identifier: '<name>' 未说明的标识符<NAME>
+Unexpected end of file in comment started on line <Number> 以行<Number>开始的注释中出现不应有的文件结束
+Unit <Unit1> was compiled with a different version of <Unit2> 单元<UNIT1>与不同版本的<UNIT2>编译
+Unit name mismatch: '<Unitname>' 单元名不匹配<UNITNAME>
+Unknown directive: '<Directive>' 未知的指令<DIRECTIVE>
+Unnamed arguments must precede named arguments in OLE Automation call 在OLE自动调用中未命名的参数必须在命名的参数前
+Unsatisfied forward or external declaration: '<Procedurename>' 不满足的向前或外部说明<Procedurename>
+Unterminated string 未结束的字符串
+Value assigned to '<Name>' never used 赋给<NAME>的值从未使用过
+Variable '<name>' inaccessible here due to optimization 由于优化,变量名<NAME>在这里不能存取
+Variable '<name>' is declared but never used in '<name>' 变量名<NAME>已说明,但不曾使用
+Variable '<Name>' might not have been initialized 变量名<NAME>可能没有初始化
+Variable required 需要变量
+Virtual constructors are not allowed 不允许虚拟的constructors方法
+Write error on <Filename> 文件<Filename>写错误
+Wrong or corrupted version of RLINK32.DLL RLINK32.DLL版本错误或不能用
+***********************************************************************************************
+
+*******************************
+* 运 行 错 误 信 息 *
+* 运行时出现的错误信息形式为: *
+* Run-time error nnn at xxxx *
+* 其中 nnn 是运行时的错误编号 *
+* xxxx 是运行时的错误地址 *
+*******************************
+
+运行时的错误分为以下三类:
+* I/O错误:错误编号为100-149
+编号 说明
+---------------------------------------------------------
+100 磁盘读错误,若要对超过格式文件尾进行读取时
+101 磁盘写错误,若磁盘满时,由CloseFile,Write,Writeln或Flush报告
+102 没有指定文件,若文件变量没有由Assign或AssignFile赋值,由Reset,Rewrite,Append,Rename和Erase报告
+103 文件没有打开,若文件未打开,由CloseFile,Read,Write,Seek,Eof,FilePos,FileSize,Flush,BlockRead或BlockWrite报告
+104 输入文件未打开,由Read,Readln,Eof,Eoln,SeekEof或SeekEoln报告有关输入的文本文件未打开
+105 输出文件未打开,由Write和Writeln报告有关文本文件没有用Console应用程序生成
+106 无效的数据格式,由Read或Readln报告从文本文件读取的数据格式不正确
+
+* 致命错误:错误编号为200-255
+编号 说明
+---------------------------------------------------------
+200 被零除
+201 范围检查错误
+202 栈上溢
+203 栈上溢错误
+204 无效的指针操作
+205 浮点上溢
+206 浮点下溢
+207 无效的浮点操作
+215 算术上溢错误
+216 存取非法
+217 控制-C
+218 授权指令
+219 无效的TYPECAST
+220 无效的变体TYPECAST
+221 无效的变体操作
+222 没有变体方法调用DISPATCHER
+223 不能建立变体数组
+224 变体不包含数组
+225 变体数组边界错误
+226 TLS初始化错误
+
+* 操作系统错误
+编号 说明
+---------------------------------------------------------
+1899L 不能生成端点映射数据库
+1752L 不能执行操作
+1751L 入口点非法
+1753L 端点映射中没有更多可用的端点
+5L 存取非法
+1331L 帐号当前不能用,因此不能登录
+1793L 用户帐号过期
+1327L 用户名是有效的,但一些限制不能验明用户
+57L 网络适配器硬件错误
+1379L 指定的别名已存在
+1344L 分配用于更新的内存块不足
+85L 本地设备名已在使用
+183L 试图建立已存在的文件
+1074L 系统当前正以最新最好的配置运行
+7L 存储控制块被破坏
+534L 运算结果超出32位
+174L 文件系统不支持锁定类型的原子变化
+199L 操作系统不能运行这一程序
+160L 传递给DosExecPgm的参数串不正确
+22L 设备不能识别的命令
+1361L 安全描述符不在要求的格式
+66L 网络资源类型不正确
+1200L 指定的设备名无效
+119L 系统不支持请求的命令
+10L 环境不正确
+193L %1不是有效的基于Windows的应用程序
+11L 企图装载不正确格式的程序
+1346L 指定的模拟级无效或没有提供要求的模拟级
+1340L 试图建立继承的ACL或没有继承的ACE
+24L 程序指定的命令长度不正确
+1365L 登录段与要求的操作状态不一致
+67L 网络名找不到
+58L 指定的服务器不能执行请求的命令
+53L 网络路径没有找到
+161L 指定的路径名无效
+230L 管道状态无效
+1206L 网络连接协议被损坏
+1204L 指定的网络提供者名无效
+60L 远程适配器不兼容
+159L 线程ID地址不正确
+1349L 符号对象类型不当
+20L 系统不能找到指定的设备
+2202L 指定的用户名无效
+1348L 请求的确定信息类是无效的
+1009L 配置记录数据库被破坏
+1010L 配置记录密钥无效
+1102L 遇到磁带头或分区
+1076L 当前引导已接受为最新的控制设置
+109L 管道结束
+111L 文件名太长
+1111L I/O总线重新设置
+170L 请求的资源在使用
+142L 此时系统不能执行JOIN或SUBST
+120L 输入的API只能在Windows/NT模式下工作
+1003L 由于一些原因不能完成的功能
+173L 锁定请求对提供撤消区未解决
+266L 不能使用
+1407L 不能找到Windows类
+1368L 表示要试图通过命名管道的模拟还没有读取
+82L 不能生成目录或文件
+1205L 不能打开网络连接协议
+1351L 没有联系的域控制器或在域内对象被保护,因此不能存取必要信息
+1310L 委托组不能禁止
+1347L 试图打开匿名的符号,匿名级的符号不能打开
+1011L 配置记录密钥不能打开
+1012L 配置记录密钥不能读取
+1013L 配置记录密钥不能写
+1021L 试图在易变的父关键字下建立稳定的子关键字
+129L 应用程序%1不能在Windows模式下运行
+1436L 子窗口不能有菜单
+1059L 指定子循环服务从属
+1410L 类已存在
+1411L 类不存在
+1412L 类仍在打开的窗口中
+1418L 线程没有打开的剪切板
+1201L 设备当前没有连接,但要记住连接
+1421L 没有找到控制ID
+1121L 由于超时已到,一系列的I/O操作完成
+23L 数据错误
+16L 目录不能删除
+1065L 指定的数据库不存在
+1425L 传递给ReleaseDC的无效HDC
+1051L 终止控制已送到其他独立运行服务的服务中
+1435L 不能破坏其他线程产生的对象
+55L 指定的网络资源不再有效
+1202L 试图记住先前记住的设备
+2404L 设备由激活的进程在使用,不能断开连接
+1107L 当装载磁带时,找不到磁带的分区信息
+145L 目录非空
+144L 目录不是根目录的子目录
+130L 试图使用文件句柄来打开磁盘操作
+267L 目录名无效
+157L 段已丢失,不能锁定
+107L 由于没有插入交换磁盘,程序终止
+1393L 磁盘结构损坏,不能在读取
+112L 磁盘上没有足够的空间
+1127L 即使重试,存取硬盘也失败
+1126L 在存取硬盘时,即使重试,存取校准操作也失败
+1128L 即使磁盘控制器重新设置,存取硬盘也失败
+1114L DLL初始化例程失败
+1356L 指定的域已存在
+1357L 在该版本中试图超出每个服务器域的限制
+1810L 指定域的名字或安全ID与该域的受托信息不一致
+108L 磁盘在使用或被其他进程锁定
+1221L 工作族或域名已被网络上的其他计算机使用
+52L 网络上存在重名
+1078L 名字已在作服务器名或服务显示名使用
+196L 操作系统不能运行这一应用程序
+994L 对EA的存取非法
+276L 在安装文件系统上的EA文件被损坏
+255L EA不一致
+277L 在安装文件系统的EA文件上的EA表用完
+275L EA不适合在缓冲区中
+282L 安装文件系统不支持扩展属性
+1100L 在操作中出现磁带尾部标志
+203L 系统不能找到输入的环境选项
+1129L 遇到磁带的物理尾部
+1501L 没有打开的日志文件事件,因此事件登录服务没有启动
+1503L 在读取之间事件日志文件已改变
+1500L Eventlog登录文件之一破坏
+1064L 在处理控制请求时出现意外
+101L 专门信号被其他进程所拥有
+192L 操作系统不能运行%1
+1208L 出现扩展错误
+83L INT24失败
+1063L 服务进程不能连接到服务控制器
+1392L 文件或目录被损坏,不能在读取
+80L 文件存在
+1006L 文件卷已变化,因此打开的文件不再有效
+2L 系统不能找到指定的文件
+1101L 磁带存取达到文件标志
+206L 文件名或后缀太长
+1125L 软盘控制器返回与登记不一致的结果
+1122L 在软盘上没有找到ID地址标志
+1123L 软盘扇区ID域与软盘控制器道地址不匹配
+1124L 软盘控制器报告出现不能由软驱识别的错误
+1007L 请求的操作在全屏幕模式不能执行
+31L 连接到系统上的设备不正常
+1360L 通配存取类型包含在存取屏蔽中
+1429L 该异常分支只能为全局设置
+1318L 指定的组已存在
+39L 磁盘满
+38L 到达文件末
+1428L 没有模块处理,不能设置非局部的异常处理
+1431L 异常分支没有安装
+1409L 热键已登记
+1419L 热键没有登记
+1441L 所有的DeferWindowsPosHWND必须具有相同的父
+1324L 在更新口令时,该返回状态表示新口令中包含不允许的值
+202L 操作系统不能运行%1
+122L 传递给系统调用的数据区太小
+1358L 由于灾难性的介质错误或磁盘数据结构破坏引起请求的操作不能完成
+1383L LSA数据库内部不一致
+1359L SAM遇到内部数据库不一致的错误,可防止SAM的进一步操作
+1800L 指定的优先级无效
+1448L 滚动条范围大于0x7FFF
+1338L 安全描述符结构无效
+198L 操作系统不能运行%1
+180L 系统检测到不正确的段号
+1799L 指定的分隔符文件无效
+1352L SAM服务器状态错误,不能完成期望的操作
+1057L 帐号名无效或不存在
+1052L 对该服务请求的控制无效
+1071L 指定的服务数据锁定无效
+1213L 指定的服务名格式无效
+1215L 指定的共享名格式不正确
+1449L SHOWWINDOWS命令无效
+1337L SID结构无效
+209L 公布的信号不正确
+1439L 参数无效
+189L 操作系统不能运行%1
+188L 操作系统不能运行%1
+1335L 子权限值无效
+114L 目标内部文件标识符不正确
+1444L 线程ID无效
+1784L 提供的用户缓冲区对请求操作失效
+118L 写后验证开关参数值不正确
+1400L 窗口处理无效
+1329L 用户帐号限制,不能从源工作站登录
+1117L 由于I/O设备错误,请求不能完成
+996L 重叠的IO时间不在发信号状态
+997L 重叠的IO操作在处理中
+197L 操作系统当前不能配置来运行应用程序
+1119L 不能打开与其它设备共享IRQ的设备,至少有一使用该IRQ的其他设备已打开
+147L 没有足够的可用资源来处理这一命令
+133L 由于驱动器已包含连接,JOIN或SUBST命令不能使用
+134L 试图在已连接的驱动器上使用JOIN或SUBST命令
+146L 指定的路径正在用替换
+149L 试图替代先前已替代的驱动器目录
+135L 试图在已替代的驱动器上使用JOIN或SUBST命令
+194L 操作系统不能运行%1
+138L 系统试图替代已替代的目录
+140L 系统试图替代已替代的目录
+1430L 日常异常处理已安装
+1018L 在有删除标志的登记键上非法操作
+1020L 试图在已有子键或值的登记键建立符号连接
+154L 输入的卷标超过11个字符的限制,前11个字符写在磁盘上,其余字符自动删除
+1322L 请求的操作被禁止或删除最新的其余管理员帐号
+1434L 该列表框不支持制表符
+1416L 列表符ID没有找到
+1390L 试图修改用户口令,但没有提供要求的LM口令
+1303L 联接局部RPC,要求用户话路密钥
+167L 试图锁定文件失败的区域
+33L 由于其他进程已锁定部分文件,该文件不能被进程存取
+212L 端锁定,因此不能重新分配
+1502L 事件登录文件已满
+1326L 由于用户名或验证信息不正确,试图登录无效
+1380L 请求登录的类型(如网络,服务等)没有被目标系统授权
+1366L 登录话路ID已在使用
+1363L 试图启动新的话路管理程序或用已在使用的LSA登录话路
+1385L 请求登录的类型(如网络,服务等)没有授权
+1334L 没有更多可分配的LUID
+164L 在系统中不能生成更多的线程
+1110L 驱动器中的介质已改变
+1378L 指定的帐号名不是别名的成员
+1320L 指定的用户帐号已在指定的组帐号中或由于组中有成员,不能删除
+1377L 指定的帐号名不是别名的成员
+1321L 指定的用户帐号不是指定组帐号的成员
+1374L 由于组是基本组,因此成员不能从该组中删除
+208L 取决文件名符号*或?输入不正确或指定的全局文件符号更多
+126L 不能找到指定的模块
+234L 需要更多的数据
+1120L 一系列的I/O操作被其他写到串口的操作完成
+317L 系统不能找到消息号为0x%1的消息
+131L 试图在超出文件头的位置移动文件指针
+215L 不能嵌套调用LoadModule
+1792L 试图登录,但网络登录服务没有启动
+88L 网络写失败
+64L 指定的网络名不再有效
+65L 网络存取非法
+54L 网络在忙
+6118L 该工作组的服务器列表当前不可用
+232L 管道在进程中关闭
+1104L 在磁带存取中,到达数据标志尾部
+1309L 试图由当前不在模拟客户的线程上操作模拟符号
+1391L ACL不包含可继承的组件
+1019L 系统不能分配记录文件要求的空间
+1807L 使用的帐号在内域受托帐号中,使用正常的帐号或远程用户帐号来存取该服务器
+1809L 使用的帐号在服务器受托帐号中,使用正常的帐号或远程用户帐号来存取该服务器
+1311L 当前没有可用的登录服务器来服务登录请求
+1808L 使用的帐号在工作站受托帐号中,使用正常的帐号或远程用户帐号来存取该服务器
+1112L 由于驱动器中没有介质,磁带查询失败
+18L 没有更多的文件
+259L 没有更多的可用数据
+113L 没有更多的可用内部文件标识符
+1203L 没有网络提供者接收给定的路径
+2138L 没有网络或网络未启动
+89L 此时系统不能启动另一进程
+1302L 对该帐号没有指定限额
+1447L 窗口不能有滚动条
+1350L 试图对没有安全性的对象操作
+1116L 由于没有关机在处理中,试图放弃关机失败
+205L 在命令子树中没有进程有信号句柄
+62L 在服务器上存储等待打印文件的空间不足
+1376L 指定的别名不存在
+1355L 指定的域不存在
+1319L 指定的组不存在
+1312L 指定的登录话路不存在,可能已终止
+1387L 不存在的新成员不能添加到别名中
+1364L 指定的验证包未知
+1313L 指定的特权不存在
+1317L 指定的用户不存在
+1437L 窗口不能具有系统菜单
+1008L 试图引用不存在的符号
+1786L 工作站没有受托秘密
+1787L 域控制器对该工作站没有帐号
+1113L 对目标多字节代码页存在的Unicode字符没有映射
+1394L 对指定的登录话路没有用户话路密钥
+125L 磁盘没有卷标
+1417L 没有找到通配符
+998L 对内存位置的无效存取
+1445L 用非MDI子窗口调用DefMDIChildProc
+1332L 映射的信息没有转变
+1300L 不是所有权限赋给调用者
+1442L 窗口不是子窗口
+2250L 网络连接不存在
+1207L 不能枚举非容器
+26L 指定的磁盘不能存取
+8L 没有足够的空间处理该命令
+1130L 没有足够的空间处理该命令服务器
+136L 系统试图删除没有连接的驱动器
+158L 段已锁定
+1362L 请求的动作只受登录进程的限制,调用进程没有登记为登录进程
+288L 试图释放不被调用者拥有的互斥法
+21L 驱动器没有准备好
+1017L 系统试图装载或恢复文件到登记中,但指定的文件格式不正确
+17L 系统不能将文件移动到不同的驱动器上
+137L 系统试图删除没有替代的驱动器
+50L 不支持网络请求
+1022L 改变请求正在完成,信息没有返回在调用者的缓冲区.调用者现在需要模拟文件,以找到所做的修改
+1386L 没有提供必要的NT交叉保密口令而试图以安全帐号管理员改变用户口令
+1304L WindowsNT的口令太复杂,无法将其转换为Windows的网络口令(该口令返回NULL字符串)
+110L 系统不能打开指定的设备或文件
+2401L 有打开文件或请求在连接期
+995L 由于线程退出或应用程序请求,I/O操作放弃
+28L 打印机没有纸
+84L 处理该请求没有足够的空间
+14L 处理该操作没有足够的空间
+1105L 磁带没有分区
+1330L 用户帐号的口令已到期
+1325L 在更新口令,该状态表示违反一些口令更新规则
+148L 指定的路径现在不能用
+3L 系统不能找到指定的路径
+231L 所有的管道实体在忙
+535L 在管道的另一端有进程
+536L 等待进程打开管道的另一端
+233L 在管道的另一端没有进程
+1446L 下拉式菜单已激活
+1131L 已检测到潜在的僵局条件
+63L 要打印的等待文件被删除
+1802L 打印机已存在
+1795L 指定的打印驱动程序已安装
+61L 打印队列已满
+1415L 使用局部的DIALOG窗口字
+1314L 请求的权限客户机没有
+127L 指定的过程没有找到
+1067L 进程突然终止
+30L 系统不能从指定的驱动器读取
+72L 指定的打印机或磁盘驱动器已暂停
+1794L 重定向器在使用,不能卸载
+1015L 登记文件的文件结构或文件的内存印象系统损坏或文件不能恢复
+1016L 登记初始化I/O操作有不可恢复的错误,登记不能完成读,写等操作
+1014L 包含系统登记数据的文件之一已恢复成功
+201L 操作系统不能运行%1
+51L 远程计算机不可用
+1220L 试图建立LAN管理服务器话路,但已建立了很多
+71L 网络请求不接受
+1816L 处理该命令没有足够的定额
+1812L 指定的图象文件不包含资源部分
+1815L 指定的资源语言ID在图象文件中找不到
+1814L 指定的资源名在图象文件中找不到
+1813L 指定的资源类型在图象文件中找不到
+1306L 两个版本级不兼容
+207L 2环堆栈在使用
+200L 代码段不能大于等于64KB
+1370L 在登记事务委托中出现错误
+1369L 登记子树的事务状态与请求的操作不兼容
+143L 系统不能替代相同的驱动器或目录
+1440L 屏幕已锁定
+1382L 秘密的长度超出允许的最大长度
+27L 驱动器没有找到请求的扇区
+25L 驱动器不能找到磁盘上指定的区域和道
+132L 文件指针不能设置在指定的设备或文件上
+102L 信号设置不能关闭
+187L 指定的系统信号名没有找到
+105L 该信号的先前物主关系已终止
+121L 信号超时期已到
+106L 在驱动器1中插入磁盘
+1118L 串行设备没有初始化,串行设备没有安装
+1341L GUID分配服务器此时禁止
+1811L 服务器在使用中,不能卸载
+1342L 此时允许GUID分配服务器
+1056L 服务实体已在运行
+1061L 服务在此时不能接受控制消息
+1055L 服务数据库锁定
+1075L 从属服务不存在或已做删除标志
+1068L 从属服务或组启动失败
+1058L 指定服务禁止,不能启动
+1060L 指定作为安装的服务不存在
+1073L 指定的服务已存在
+1069L 由于登录失败,服务不能启动
+1072L 指定的服务已做删除标志
+1077L 引导后没有启动的服务已启动
+1054L 不能产生该服务的线程
+1062L 服务没有启动
+1053L 服务对启动没有响应或及时地控制请求
+1066L 服务已返回一服务指定错误代码
+1070L 在启动后,服务挂在启动等待状态
+1219L 提供的证书与已有证书集冲突
+1433L LB_SETCOUNT发送到非缓慢的列表框
+1103L 磁带存取达到设置标志
+36L 打开的共享文件太多
+70L 远程服务暂停或在启动的过程中
+32L 由于文件被其他进程使用,该进程则不能存取
+1115L 系统关闭在处理中
+162L 信号已暂挂
+156L 接受进程拒绝信号
+1301L 要映射的一些信息没有传送
+1371L 试图在与内置帐号不兼容的SAM帐号上操作
+1372L 请求的操作不能在指定的组上执行,由于它的内置的特殊组
+1373L 请求的操作不能在指定的用户上执行,由于它的内置的特殊组
+1001L 递归太深,堆栈溢出
+141L 系统试图SUBST一驱动器到已替代驱动器的目录
+139L 系统试图替代一驱动器到已替代驱动器的目录
+0L 操作成功的完成
+999L 存取分页的文件错误
+150L 系统追踪的信息不在指定的CONFIG.SYS文件中或追踪不允许
+210L 信号句柄没有设置
+1406L CreateWindows失败,建立WS_CHILD类的顶级窗口
+1375L 试图建立作为基本使用的符号,但该符号已在使用.一次只能有一个基本的符号
+56L 已达到网络BIOS命令限制
+1384L 在试图登录中,用户的安全堆集太多的安全ID
+1333L 请求的LUD数不能在单个的分配中分配
+214L 太多的动态连接模块连接到该程序中或动态模块中
+152L 已设置太多的信号
+68L 超出局域网网卡的名字限制
+4L 系统不能打开该文件
+298L 给信号太多的邮件
+1381L 在单个系统中可存储的最大秘密数超出
+103L 信号不能重新设置
+100L 不能建立另一系统信号
+69L 网络BIOS话路超出
+1389L 指定太多的SID
+155L 不能建立另一线程
+1790L 网络登录失败
+1788L 在主域与受托域之间的受托关系失败
+1789L 在工作站与主域之间的受托关系失败
+1108L 试图锁定缺少弹出介质的机构
+1109L 卸载介质失败
+59L 出现意外的网络错误
+1796L 指定的处理器未知
+1798L 打印处理器未知
+1797L 打印驱动器未知
+1305L 遇到或指定的版本对服务来说未知
+1785L 磁盘介质不能辨认,可能是未格式化
+1005L 卷不包含识别文件系统
+1316L 指定的用户已存在
+240L 话路取消
+128L 没有等待的子进程
+1423L 窗口不是一命令框
+1420L 窗口不是一有效的对话框
+1408L 无效的窗口,属于其他的线程
+29L 系统不能写到指定的驱动器
+19L 介质写保护
+34L 驱动器中错误的磁盘,将%2(卷系列号%3)插入到驱动器%1中
+1323L 在更新口令时,该状态表示提供的口令值不正确
+-1L 无效的输入句柄
+-2L 无效的输入句柄
+-7L 输入参数超出范围
+-5L LZFile文件结构内存不足
+-6L 不正确的全局句柄
+-3L 损坏的压缩文件结构
+-4L 输出文件空间不足
+-8L 不能识别的压缩算法
+0L 没有错误
+1768L 在服务器中出现编址错误
+1713L 服务器已在听从
+1711L 对象UUID已登记
+1746L 连接不包含鉴别信息
+1726L 远程过程调用失败
+1727L 远程过程调用失败,不能执行
+1791L 远程过程调用已在该线程处理中
+1764L 不支持请求的操作
+1720L 不能生成端点
+1740L 端点重复
+1760L 入口已存在
+1761L 入口没有找到
+1769L 在服务器上的浮点操作被零除
+1771L 在服务器上出现浮点上溢
+1770L 在服务器上出现浮点下溢
+1898L 组成员没有找到
+1755L 入口名不完善
+1759L 界面没有找到
+1766L 在RPC中出现内部错误
+1749L 安全上下文无效
+1702L 连接句柄无效
+1734L 数组边界无效
+1706L 端点格式无效
+1736L 名称语法无效
+1707L 网络地址无效
+1724L 网络选项无效
+1900L 对象通用唯一标识符为空
+1704L RPC协议序列无效
+1700L 字符串连接无效
+1705L 字符串UUID失效
+1733L 标志无效
+1709L 超时值无效
+1756L 版本选项无效
+1742L 调用的最大数太小
+1762L 命名服务不可用
+1718L 没有连接
+1725L 在该线程中没有远程过程调用
+1765L 允许的模拟没有安全上下文可用
+1708L 没有找到端点
+1735L 连接不包含入口点名
+1806L 没有足够的连接
+1757L 没有足够的成员
+1719L 没有协议序列
+1714L 没有登记的协议序列
+1715L 服务器没有听从
+1710L 对象UUID没有找到
+1721L 没有足够的资源完成该操作
+1745L 过程号超出范围
+1728L 出现RPC协议错误
+1744L RPC协议序列没有找到
+1703L 不支持RPC协议序列
+1731L 服务器没有足够的内存完成该操作
+1723L 服务器太忙,不能完成该操作
+1722L 服务器不可用
+1743L 字符串太长
+1712L 类型UUID已登记
+1748L 未知的鉴别级
+1747L 未知的鉴别服务
+1741L 未知的鉴别类型
+1750L 未知的授权服务
+1717L 未知的界面
+1716L 未知的管理类型
+1737L 不支持命令语法
+1730L 服务器不支持转换语法
+1732L 不支持类型UUID
+1739L 没有可用于构造UUID的网络地址
+1701L 连接处理为不正确的类型
+1767L 服务器试图做整数被零除
+1783L 存根接收到不正确的数据
+1782L 字节计算太小
+1781L 枚举值超界
+1772L 用于自动处理连接的可用服务器已用完
+1780L 空引用指针传递到存根
+1779L 存根不能得到调用句柄
+1773L 由DCERPCCHARTRANS指定的文件不能打开
+1774L 包含字符转换表的文件小于512KB
+1777L 在调用中上下文处理改变
+1776L 上下文句柄与任何已知的不匹配
+1778L 传递给远程调用的连接句柄不匹配
+1775L 空的上下句柄作为参数传递本文出自 51CTO.COM技术博客
