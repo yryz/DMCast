@@ -1,3 +1,7 @@
+{
+ 20100427 %Fix 没有产生，先消耗会直接返回0(应该等待)
+}
+
 unit Produconsum_u;
 
 interface
@@ -21,7 +25,7 @@ type
     procedure WakeConsumer();
     function _ConsumeAny(minAmount, waitTime: UINT): Integer; //阻塞
   public
-    constructor Create(size: Integer; const name: PChar);
+    constructor Create(size: UINT; const name: PChar);
     destructor Destroy; override;
 
     procedure Produce(amount: UINT);    //产生
@@ -41,6 +45,127 @@ type
 implementation
 
 { TProduceConsum }
+
+constructor TProduceConsum.Create(size: UINT; const name: PChar);
+begin
+  Assert(size <= UINT(-1) div 2, '"size" Too Big!');
+  FSize := size;
+  FProduced := 0;
+  FConsumed := 0;
+  FAtEnd := False;
+  InitializeCriticalSection(FLock);
+  FConsumerIsWaiting := True;           //True防止没有产生，就先消耗
+  FEvent := CreateEvent(nil, True, False, nil); //[手动复位][无信号]
+  FName := name;
+end;
+
+destructor TProduceConsum.Destroy;
+begin
+  DeleteCriticalSection(FLock);
+  CloseHandle(FEvent);
+  inherited;
+end;
+
+procedure TProduceConsum.MarkEnd;
+begin
+  FAtEnd := True;
+  WakeConsumer();
+end;
+
+procedure TProduceConsum.Produce(amount: UINT);
+var
+  produced, consumed: UINT;
+begin
+  produced := FProduced;
+  consumed := FConsumed;
+
+  { * sanity checks:
+    * 1. should not produce more than size
+    * 2. do not pass consumed + size
+    * }
+  if (amount > FSize) then begin
+    raise Exception.CreateFmt('Buffer overflow in produce %s: %d > %d '#10,
+      [FName, amount, FSize]);
+    Exit;
+  end;
+
+  Inc(produced, amount);
+  if (produced >= 2 * FSize) then
+    Dec(produced, 2 * FSize);
+
+  if (produced > consumed + FSize) or
+    ((produced < consumed) and (produced > consumed - FSize)) then begin
+    raise Exception.CreateFmt('Buffer overflow in produce %s: %d > %d[%d]'#10,
+      [FName, produced, consumed, FSize]);
+    Exit;
+  end;
+
+  FProduced := produced;
+  WakeConsumer();
+end;
+
+procedure TProduceConsum.WakeConsumer;
+begin
+  if FConsumerIsWaiting then
+  begin
+    EnterCriticalSection(FLock);
+    SetEvent(FEvent);
+    LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TProduceConsum._ConsumeAny(minAmount, waitTime: UINT): Integer;
+var
+  r                 : Integer;
+  amount            : UINT;
+begin
+{$IFDEF DEBUG}
+  WriteLn(Format('%s: Waiting for %d bytes(%d: %d)',
+    [FName, minAmount, FConsumed, FProduced]);
+{$ENDIF}
+    FConsumerIsWaiting := True;
+    amount := GetProducedAmount();
+    if (amount >= minAmount) or FAtEnd then
+    begin
+      FConsumerIsWaiting := False;
+{$IFDEF DEBUG}
+      WriteLn(Format('%s: got %d bytes', [FName, amount]));
+{$ENDIF}
+      Result := amount;
+    end else
+    begin
+      EnterCriticalSection(FLock);
+      while (not FAtEnd) do
+      begin
+        amount := GetProducedAmount();
+        if (amount < minAmount) then    //等待达到最底线
+        begin
+{$IFDEF DEBUG}
+          WriteLn(Format('%s: ..Waiting for %d bytes(%d: %d)',
+            [FName, minAmount, FConsumed, FProduced]);
+{$ENDIF}
+            ResetEvent(FEvent);
+            LeaveCriticalSection(FLock);
+
+            r := WaitForSingleObject(FEvent, waitTime);
+            EnterCriticalSection(FLock);
+
+            if (r = WAIT_TIMEOUT) then begin
+              amount := GetProducedAmount();
+              Break;
+            end;
+        end else
+          Break;
+      end;                              //end while
+      LeaveCriticalSection(FLock);
+{$IFDEF DEBUG}
+      WriteLn(Format('%s: Got them %d(for %d) %s',
+        [FName, amount, minAmount, BoolToStr(FAtEnd)]));
+{$ENDIF}
+      FConsumerIsWaiting := False;
+      Result := amount;
+    end;
+end;
 
 function TProduceConsum.Consume(amount: UINT): Integer;
 begin
@@ -86,25 +211,6 @@ begin
   Result := amount;
 end;
 
-constructor TProduceConsum.Create(size: Integer; const name: PChar);
-begin
-  FSize := size;
-  FProduced := 0;
-  FConsumed := 0;
-  FAtEnd := False;
-  InitializeCriticalSection(FLock);
-  FConsumerIsWaiting := False;
-  FEvent := CreateEvent(nil, True, True, nil); //[手动复位][有信号]
-  FName := name;
-end;
-
-destructor TProduceConsum.Destroy;
-begin
-  DeleteCriticalSection(FLock);
-  CloseHandle(FEvent);
-  inherited;
-end;
-
 function TProduceConsum.GetConsumerPosition: UINT;
 begin
   Result := FConsumed mod FSize;
@@ -128,105 +234,4 @@ begin
   Result := FSize;
 end;
 
-procedure TProduceConsum.MarkEnd;
-begin
-  FAtEnd := True;
-  WakeConsumer();
-end;
-
-procedure TProduceConsum.Produce(amount: UINT);
-var
-  produced, consumed: UINT;
-begin
-  produced := FProduced;
-  consumed := FConsumed;
-
-  { * sanity checks:
-    * 1. should not produce more than size
-    * 2. do not pass consumed + size
-    * }
-  if (amount > FSize) then begin
-    raise Exception.Create(Format('Buffer overflow in produce %s: %d > %d '#10,
-      [FName, amount, FSize]));
-    Exit;
-  end;
-
-  Inc(produced, amount);
-  if (produced >= 2 * FSize) then
-    Dec(produced, 2 * FSize);
-
-  if (produced > consumed + FSize) or
-    ((produced < consumed) and (produced > consumed - FSize)) then begin
-    raise Exception.Create(Format('Buffer overflow in produce %s: %d > %d[%d]'#10,
-      [FName, produced, consumed, FSize]));
-    Exit;
-  end;
-
-  FProduced := produced;
-  WakeConsumer();
-end;
-
-procedure TProduceConsum.WakeConsumer;
-begin
-  if FConsumerIsWaiting then
-  begin
-    EnterCriticalSection(FLock);
-    SetEvent(FEvent);
-    LeaveCriticalSection(FLock);
-  end;
-end;
-
-function TProduceConsum._ConsumeAny(minAmount, waitTime: UINT): Integer;
-var
-  r                 : Integer;
-  amount            : UINT;
-begin
-{$IFDEF DEBUG}
-  flprintf('%s: Waiting for %d bytes(%d: %d)\n',
-    FName, minAmount, FConsumed, FProduced);
-{$ENDIF}
-  FConsumerIsWaiting := True;
-  amount := GetProducedAmount();
-  if (amount >= minAmount) or FAtEnd then
-  begin
-    FConsumerIsWaiting := False;
-{$IFDEF DEBUG}
-    flprintf('%s: got %d bytes\n', pc^.name, amount);
-{$ENDIF}
-    Result := amount;
-  end else
-  begin
-    EnterCriticalSection(FLock);
-    while (not FAtEnd) do
-    begin
-      amount := GetProducedAmount();
-      if amount < minAmount then        //等待达到最底线
-      begin
-        //{$IFDEF DEBUG}
-        //      flprintf('%s: ..Waiting for %d bytes(%d: %d)\n',
-        //        pc^.name, minAmount, pc^.consumed, pc^.produced);
-        //{$ENFIF}
-        ResetEvent(FEvent);
-        LeaveCriticalSection(FLock);
-        r := WaitForSingleObject(FEvent, waitTime);
-        EnterCriticalSection(FLock);
-
-        if (r = WAIT_TIMEOUT) then begin
-          amount := GetProducedAmount();
-          Break;
-        end;
-      end else
-        Break;
-    end;                                //end while
-    LeaveCriticalSection(FLock);
-{$IFDEF DEBUG}
-    flprintf('%s: Got them %d(for %d)%d\n', FName,
-      amount, minAmount, FAtEnd);
-{$ENDIF}
-    FConsumerIsWaiting := False;
-    Result := amount;
-  end;
-end;
-
 end.
-

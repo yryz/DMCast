@@ -2,25 +2,25 @@ unit Console_u;
 
 interface
 uses
-  Windows, Sysutils, WinSock;
+  Windows, Sysutils, WinSock2;
 
 type
   TConsole = class                      //参与控制会话
   private
     FSocket: TSocket;
-    FThread: THandle;                   //Wait KeyPress
+    FHandles: array[0..1] of THandle;   //0 Socket,1 Thread Wait KeyPress
+    FNrHandles: DWORD;
     FKey: Char;                         //Key
     FKeyPressed: Boolean;
   private
-    function MakeConSocket(): Integer;
+    //function MakeConSocket(): Integer;
   public
     constructor Create();
     destructor Destroy; override;
-    procedure Start(enKeyPress: Boolean);
+    procedure Start(s: TSocket; enKeyPress: Boolean);
     procedure Stop;
-    function SelectWithConsole(var maxFd: Integer; var read_set: TFDSet;
-      tv: PTimeVal): Integer;
-    function PostPress(Key: Char): Boolean;
+    function SelectWithConsole(waitTime: DWORD): Integer;
+    function PostPressed: Boolean;
   published
     property Key: Char read FKey;
     property KeyPressed: Boolean read FKeyPressed;
@@ -36,8 +36,7 @@ var
 begin
 {$IFDEF CONSOLE}
   read(key);
-  if key <> #0 then
-    Console.PostPress(key);
+  Result := Ord(key);
 {$ENDIF}
 end;
 
@@ -51,70 +50,95 @@ begin
   inherited;
 end;
 
-function TConsole.MakeConSocket(): Integer;
-var
-  r, len            : Integer;
-  addr              : TSockAddrIn;
-begin
-  addr.sin_family := AF_INET;
-  addr.sin_addr.s_addr := inet_addr('127.0.0.1');
-  addr.sin_port := htons(0);
+//function TConsole.MakeConSocket(): Integer;
+//var
+//  r, len            : Integer;
+//  addr              : TSockAddrIn;
+//begin
+//  addr.sin_family := AF_INET;
+//  addr.sin_addr.s_addr := inet_addr('127.0.0.1');
+//  addr.sin_port := htons(0);
+//
+//  Result := socket(PF_INET, SOCK_DGRAM, 0);
+//  r := bind(Result, addr, SizeOf(addr));
+//  if (r = SOCKET_ERROR) then begin
+//    if (Result > 0) then begin
+//      closesocket(Result);
+//      Result := 0;
+//    end;
+//    raise Exception.Create('Could not start console listen socket');
+//  end;
+//  //收发对接
+//  len := SizeOf(TSockAddrIn);
+//  getsockname(Result, addr, len);
+//  if connect(Result, addr, len) = SOCKET_ERROR then
+//    raise Exception.Create('Could not connect console socket');
+//end;
 
-  Result := socket(PF_INET, SOCK_DGRAM, 0);
-  r := bind(Result, addr, SizeOf(addr));
-  if (r = SOCKET_ERROR) then begin
-    if (Result > 0) then begin
-      closesocket(Result);
+function TConsole.SelectWithConsole(waitTime: DWORD): Integer;
+begin
+  Result := WaitForMultipleObjects(FNrHandles, @FHandles, False, waitTime);
+  case Result of
+    WAIT_OBJECT_0 + 0:                  //Socket
+      Result := FSocket;
+    WAIT_OBJECT_0 + 1:
+      begin
+        GetExitCodeThread(FHandles[1], DWORD(Result));
+        if Result > 0 then begin        //KeyPress
+          FKeyPressed := True;
+          FKey := Chr(Result);
+          Result := 0;
+        end else
+          Result := -1;
+      end;
+    WAIT_TIMEOUT:
       Result := 0;
-    end;
-    raise Exception.Create('Could not start console listen socket');
+  else                                  //Error
+    Result := -1;
   end;
-  //收发对接
-  len := SizeOf(TSockAddrIn);
-  getsockname(Result, addr, len);
-  if connect(Result, addr, len) = SOCKET_ERROR then
-    raise Exception.Create('Could not connect console socket');
 end;
 
-function TConsole.SelectWithConsole(var maxFd: Integer; var read_set: TFDSet;
-  tv: PTimeVal): Integer;
+function TConsole.PostPressed: Boolean;
 begin
-  FD_SET(FSocket, read_set);
-  if (FSocket >= maxFd) then
-    maxFd := FSocket + 1;
-
-  Result := select(maxFd, @read_set, nil, nil, tv);
-  if (Result > 0) then
-    if FD_ISSET(FSocket, read_set) then
-      FKeyPressed := True;
+  FKeyPressed := True;
+  Result := SetEvent(FHandles[0]);
 end;
 
-function TConsole.PostPress(Key: Char): Boolean;
-begin
-  FKey := Key;
-  Result := send(FSocket, Key, 1, 0) > 0;
-  if Result then Sleep(0);              //Thread时保证数据能传出
-end;
-
-procedure TConsole.Start(enKeyPress: Boolean);
+procedure TConsole.Start(s: TSocket; enKeyPress: Boolean);
 var
   dwThID            : DWORD;
 begin
-  FSocket := MakeConSocket();
+  FSocket := s;
+  FHandles[0] := CreateEvent(nil, FALSE, FALSE, nil);
+  if WSAEventSelect(s, FHandles[0], FD_READ or FD_CLOSE) = SOCKET_ERROR then
+  begin
+    FSocket := INVALID_SOCKET;
+    raise Exception.CreateFmt('WSAAsyncSelect Socket(%d) Error(%d)', [s, GetLastError]);
+  end;
+
+  FNrHandles := 1;
   if enKeyPress then begin
-    FThread := BeginThread(nil, 0, @WaitForKeyPress, Self, 0, DWORD(dwThID));
+    FHandles[1] := BeginThread(nil, 0, @WaitForKeyPress, Self, 0, DWORD(dwThID));
+    if FHandles[1] > 0 then Inc(FNrHandles);
   end;
 end;
 
-procedure TConsole.Stop;
+procedure TConsole.Stop();
+var
+  nBlock            : DWORD;
 begin
-  if FSocket > 0 then begin
-    TerminateThread(FThread, 0);
-    WaitForSingleObject(FThread, INFINITE);
-    closesocket(FSocket);
-    FSocket := -1;
+  if FHandles[1] > 0 then begin
+    TerminateThread(FHandles[1], 0);
+    WaitForSingleObject(FHandles[1], INFINITE);
+    FHandles[1] := 0;
+  end;
+  if Integer(FSocket) > 0 then begin
+    WSAEventSelect(FSocket, FHandles[0], 0);
+    CloseHandle(FHandles[0]);
+    nBlock := 0;
+    ioctlsocket(FSocket, FIONBIO, nBlock);
+    FSocket := INVALID_SOCKET;
   end;
 end;
 
 end.
-

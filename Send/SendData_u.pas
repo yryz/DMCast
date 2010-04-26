@@ -489,10 +489,8 @@ begin
   if size > FConfig^.blockSize then
     size := FConfig^.blockSize;
 
-  Result := SendRawData(@msg, SizeOf(msg),
-    Pointer(FDp.DataBuffer +
-    (FBase + i * FConfig^.blockSize) mod FDp.DataBufSize),
-    size);
+  Result := SendRawData(@msg, SizeOf(msg), Pointer(FDp.DataBuffer
+    + (FBase + i * FConfig^.blockSize) mod FDp.DataBufSize), size);
 end;
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
@@ -876,8 +874,7 @@ begin
     if (bytes > (pos + bytes) mod DISK_BLOCK_SIZE) then
       Dec(bytes, (pos + bytes) mod DISK_BLOCK_SIZE);
 
-    if (bytes = 0) then
-      Break;                            //net writer exited?
+    if (bytes = 0) then Break;          //net writer exited?
 
     bytes := FileRead(FFile, PChar(FDataBuffer + pos)^, bytes);
 
@@ -972,7 +969,7 @@ begin
       end;
   else begin
 {$IFDEF CONSOLE}
-      WriteLn(Format('Bad command %-.4x', [msg^.opCode]));
+      WriteLn(Format('Bad command %-.4x', [ntohs(msg^.opCode)]));
 {$ENDIF}
     end;
   end;

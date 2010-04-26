@@ -24,8 +24,7 @@ type                                    //不要直接使用对象,容易出错
     function SendConnectionReply(client: PSockAddrIn;
       capabilities: Integer; rcvbuf: DWORD_PTR): Integer;
     function CheckClientWait(firstConnected: PDWORD): Integer;
-    function MainDispatcher(fd: PIntegerArray; nr: Integer;
-      var tries: Integer; firstConnected: PDWORD): Integer;
+    function MainDispatcher(var tries: Integer; firstConnected: PDWORD): Integer;
   public
     constructor Create(config: PNetConfig; Stats: ISenderStats);
     destructor Destroy; override;
@@ -179,21 +178,15 @@ end;
  * firstConnected - when did the first client connect?
  }
 
-function TNegotiate.MainDispatcher(fd: PIntegerArray; nr: Integer;
-  var tries: Integer; firstConnected: PDWORD): Integer;
+function TNegotiate.MainDispatcher(var tries: Integer; firstConnected: PDWORD): Integer;
 var
-  ret               : Integer;
-
+  selected          : Integer;
   client            : TSockAddrIn;
   fromClient        : TCtrlMsg;
-  read_set          : TFDSet;
   msgLength         : Integer;
   loopStart         : DWORD;
 
-  maxFd, selected   : Integer;
-
-  tv                : TTimeVal;
-  tvp               : PTimeVal;
+  waitTime          : DWORD;
 begin
   Result := 0;
   loopStart := GetTickCount;
@@ -217,25 +210,19 @@ begin
   end;
 
   while (Result = 0) do begin
-    maxFd := prepareForSelect(fd, nr, @read_set);
 
     if (FConfig^.rexmit_hello_interval > 0) then begin
-      tv.tv_usec := (FConfig^.rexmit_hello_interval mod 1000) * 1000;
-      tv.tv_sec := FConfig^.rexmit_hello_interval div 1000;
-      tvp := @tv;
+      waitTime := FConfig^.rexmit_hello_interval;
     end else if (firstConnected <> nil) and (FParts.Count > 0)
       or (FConfig^.startTimeout > 0) then begin
-      tv.tv_usec := 0;
-      tv.tv_sec := 2;
-      tvp := @tv;
+      waitTime := 2000;
     end else
-      tvp := nil;
+      waitTime := INFINITE;
 
-    Inc(maxFd);
-    selected := FConsole.SelectWithConsole(maxFd, read_set, tvp);
+    selected := FConsole.SelectWithConsole(waitTime);
     if (selected < 0) then begin
+      OutputDebugString('SelectWithConsole error');
       Result := -1;
-      OutputDebugString('select error');
       Exit;
     end;
 
@@ -244,8 +231,7 @@ begin
       Exit;
     end;
 
-    if (selected > 0) then              // receiver activity
-      Break;
+    if (selected > 0) then Break;       // receiver activity
 
     if (FConfig^.rexmit_hello_interval > 0) then begin
       { retransmit hello message }
@@ -259,13 +245,14 @@ begin
       Result := Result or checkClientWait(firstConnected);
 
     if (Result <> 0) and (FConfig^.startTimeout > 0) and
-      (GetTickCount - loopStart >= FConfig^.startTimeout) then begin
+      (DiffTickCount(loopStart, GetTickCount) >= FConfig^.startTimeout) then begin
       Result := -1;
       Break;
     end;
   end;                                  //end while
 
   //有客户连接
+  Result := 0;
   FillChar(fromClient, SizeOf(fromClient), 0); { Zero it out in order to cope with short messages
   * from older versions }
 
@@ -274,15 +261,11 @@ begin
 {$IFDEF CONSOLE}
     WriteLn('problem getting data from client.errorno:', GetLastError);
 {$ENDIF}
-    Result := 0;
     Exit;                               { don't panic if we get weird messages }
   end;
 
   if Boolean(FConfig^.flags and FLAG_ASYNC) then
-  begin
-    Result := 0;
     Exit;
-  end;
 
   case TOpCode(ntohs(fromClient.opCode)) of
     CMD_CONNECT_REQ:
@@ -300,27 +283,23 @@ begin
 
     CMD_DISCONNECT:
       begin
-        ret := FParts.Lookup(@client);
-        if (ret >= 0) then
-          FParts.Remove(ret);
+        FParts.Remove(FParts.Lookup(@client));
       end;
   else begin
 {$IFDEF CONSOLE}
       WriteLn(Format('Unexpected command %-.4x',
-        [fromClient.opCode]));
+        [ntohs(fromClient.opCode)]));
 {$ENDIF}
     end;
   end;
 end;
 
-function TNegotiate.StartNegotiate(): Integer;
+function TNegotiate.StartNegotiate(): Integer; // If Result=1. start transfer
 var
   tries             : Integer;
-  r                 : Integer;          { return value for maindispatch. If 1, start transfer }
   firstConnected    : DWORD;
   firstConnectedP   : PDWORD;
 begin
-  r := 0;
   tries := 0;
   Result := 0;
   firstConnected := 0;
@@ -353,18 +332,18 @@ begin
     firstConnectedP := nil;
 
   //开始分派
-  FConsole.Start(not Boolean(FConfig^.flags and FLAG_NOKBD)); //
+  FConsole.Start(FUSocket.Socket, not Boolean(FConfig^.flags and FLAG_NOKBD));
   while True do begin
-    r := MainDispatcher(@FUSocket.Socket, 1, tries, firstConnectedP);
-    if r <> 0 then Break;
+    Result := MainDispatcher(tries, firstConnectedP);
+    if Result <> 0 then Break;
   end;
   if FConsole.keyPressed and (FConsole.Key = 'q') then Halt; //手动退出
   FConsole.Stop;
 
-  if (r = 1) then begin
-    if Boolean(FConfig^.flags and FLAG_ASYNC) or (FParts.Count > 0) then
-      Result := 1
-    else begin
+  if (Result = 1) then begin
+    if not Boolean(FConfig^.flags and FLAG_ASYNC) and (FParts.Count < 0) then
+    begin
+      Result := 0;
 {$IFDEF CONSOLE}
       WriteLn('No participants... exiting.');
 {$ENDIF}
@@ -376,7 +355,7 @@ function TNegotiate.StopNegotiate: Boolean;
 begin
   Result := False;
   if Assigned(FConsole) then
-    Result := FConsole.PostPress(#0);
+    Result := FConsole.PostPressed;
 end;
 
 procedure TNegotiate.DoTransfer();
@@ -435,7 +414,6 @@ begin
 
   FDp.Resume;                           //唤醒数据池
   FRc.Resume;                           //唤醒反馈隧道
-  Sleep(0);                             //保证工作线程先启动
   //Sender.Resume;
 
   FSender.Execute;                      //执行发送
@@ -473,4 +451,3 @@ begin
 end;
 
 end.
-

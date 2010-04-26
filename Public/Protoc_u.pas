@@ -155,7 +155,7 @@ const
    *   - receiver multicast capable
    *   - receiver can receive ASYNC and SN
    }
-
+   { 一般正常模式 }
   CAP_NEW_GEN       = $0001;
 
   { Use multicast instead of Broadcast for data }
@@ -186,4 +186,3 @@ initialization
   Assert(SizeOf(TRetransmit) < 1472);
   Assert(MAX_SLICE_SIZE <= DISK_BLOCK_SIZE);
 end.
-

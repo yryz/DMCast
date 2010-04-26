@@ -25,7 +25,7 @@ type
     destructor Destroy; override;
 
     function IsValid(i: Integer): Boolean;
-    function Remove(i: Integer): Boolean;
+    function Remove(i: Integer): Boolean; //is safe remove
     function Lookup(addr: PSockAddrIn): Integer;
     function Add(addr: PSockAddrIn; capabilities: Integer; rcvbuf: DWORD_PTR;
       pointopoint: Boolean): Integer;
@@ -113,7 +113,8 @@ end;
 
 function TParticipants.IsValid(i: Integer): Boolean;
 begin
-  Result := FClientTable[i].used;
+  Result := (i >= Low(FClientTable)) and (i <= High(FClientTable))
+    and FClientTable[i].used;
 end;
 
 function TParticipants.Lookup(addr: PSockAddrIn): Integer;
@@ -183,7 +184,7 @@ end;
 
 function TParticipants.Remove(i: Integer): Boolean;
 begin
-  Result := FClientTable[i].used;
+  Result := IsValid(i);
   if Result then
   begin
     FClientTable[i].used := False;
@@ -192,10 +193,8 @@ begin
     WriteLn(Format('Disconnecting #%d (%s)',
       [i, inet_ntoa(FClientTable[i].addr.sin_addr)]));
 {$ELSE}
-
 {$ENDIF}
   end;
 end;
 
 end.
-

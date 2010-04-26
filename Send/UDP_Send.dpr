@@ -5,6 +5,8 @@ program UDP_Send;
 uses
   //FastMM4 in '..\..\Include\FastMM4\FastMM4.pas',
   //FastMM4Messages in '..\..\Include\FastMM4\FastMM4Messages.pas',
+  Windows,
+  SysUtils,
   Config_u in 'Config_u.pas',
   Protoc_u in '..\Public\Protoc_u.pas',
   Produconsum_u in '..\Public\Produconsum_u.pas',
