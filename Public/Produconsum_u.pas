@@ -14,6 +14,7 @@ type
   TProduceConsum = class
   private
     FSize: UINT;
+    FDoubSize: UINT;                    //Ë«±¶´óÐ¡
     FProduced: UINT;
     FConsumed: UINT;
     FAtEnd: Boolean;
@@ -50,6 +51,7 @@ constructor TProduceConsum.Create(size: UINT; const name: PChar);
 begin
   Assert(size <= UINT(-1) div 2, '"size" Too Big!');
   FSize := size;
+  FDoubSize := 2 * size;
   FProduced := 0;
   FConsumed := 0;
   FAtEnd := False;
@@ -90,8 +92,8 @@ begin
   end;
 
   Inc(produced, amount);
-  if (produced >= 2 * FSize) then
-    Dec(produced, 2 * FSize);
+  if (produced >= FDoubSize) then
+    Dec(produced, FDoubSize);
 
   if (produced > consumed + FSize) or
     ((produced < consumed) and (produced > consumed - FSize)) then begin
@@ -202,8 +204,8 @@ var
   consumed          : UINT;
 begin
   consumed := FConsumed;
-  if (consumed >= 2 * FSize - amount) then
-    Inc(consumed, amount - 2 * FSize)
+  if (consumed >= FDoubSize - amount) then
+    Inc(consumed, amount - FDoubSize)
   else
     Inc(consumed, amount);
 
@@ -219,7 +221,7 @@ end;
 function TProduceConsum.GetProducedAmount: Integer;
 begin
   if (FProduced < FConsumed) then
-    Result := FProduced + 2 * FSize - FConsumed
+    Result := FProduced + FDoubSize - FConsumed
   else
     Result := FProduced - FConsumed;
 end;
@@ -235,3 +237,4 @@ begin
 end;
 
 end.
+
