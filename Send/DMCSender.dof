@@ -91,10 +91,10 @@ ImageBase=4194304
 ExeDescription=
 [Directories]
 OutputDir=..\bin
-UnitOutputDir=
+UnitOutputDir=z:\
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
+SearchPath=..\Include
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
 Conditionals=CONSOLE
 DebugSourceDirs=
@@ -110,7 +110,7 @@ ActiveLang=
 ProjectLang=
 RootDir=d:\Program Files\Borland\Delphi7\Bin\
 [Version Info]
-IncludeVerInfo=0
+IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
@@ -124,14 +124,14 @@ DLL=0
 Locale=2052
 CodePage=936
 [Version Info Keys]
-CompanyName=
-FileDescription=
+CompanyName=HouSoft
+FileDescription=文件/数据多播
 FileVersion=1.0.0.0
 InternalName=
-LegalCopyright=
+LegalCopyright=HouSoft
 LegalTrademarks=
 OriginalFilename=
-ProductName=
+ProductName=DMC
 ProductVersion=1.0.0.0
 Comments=
 [Excluded Packages]
@@ -143,9 +143,14 @@ Item0=CONSOLE
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=2
-Item0=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
-Item1=E:\程序\Delphi\HOU网络管理\Include\win32api
+Count=4
+Item0=..\Include
+Item1=E:\HouProject\HouNetMgr\Include
+Item2=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
+Item3=E:\程序\Delphi\HOU网络管理\Include\win32api
+[HistoryLists\hlUnitOutputDirectory]
+Count=1
+Item0=z:\
 [HistoryLists\hlOutputDirectorry]
 Count=1
 Item0=..\bin

@@ -1,9 +1,9 @@
-object frmUdpcast: TfrmUdpcast
-  Left = 769
-  Top = 168
-  Width = 400
-  Height = 331
-  Caption = #25991#20214#32452#25773
+object frmCastFile: TfrmCastFile
+  Left = 222
+  Top = 222
+  Width = 591
+  Height = 372
+  Caption = #25991#20214#22810#25773' Beta1'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,12 +11,13 @@ object frmUdpcast: TfrmUdpcast
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object stat1: TStatusBar
     Left = 0
-    Top = 278
-    Width = 392
+    Top = 326
+    Width = 583
     Height = 19
     Panels = <
       item
@@ -24,43 +25,44 @@ object frmUdpcast: TfrmUdpcast
       end>
   end
   object lvClient: TListView
-    Left = 49
+    Left = 0
     Top = 65
-    Width = 343
-    Height = 213
+    Width = 196
+    Height = 261
     Align = alClient
     Columns = <
       item
         Caption = 'ID'
       end
       item
-        Caption = #23458#25143'IP'
-        Width = 120
-      end
-      item
-        Caption = #29366#24577
+        Caption = #23458#25143#31471
+        Width = 110
       end>
     LargeImages = ImageList1
+    ReadOnly = True
+    RowSelect = True
     SmallImages = ImageList1
-    TabOrder = 1
+    TabOrder = 2
     ViewStyle = vsReport
   end
   object pb1: TProgressBar
-    Left = 0
+    Left = 196
     Top = 65
-    Width = 49
-    Height = 213
-    Align = alLeft
+    Width = 28
+    Height = 261
+    Align = alRight
     Orientation = pbVertical
-    TabOrder = 2
+    TabOrder = 1
   end
   object Panel1: TPanel
     Left = 0
     Top = 0
-    Width = 392
+    Width = 583
     Height = 65
     Align = alTop
-    TabOrder = 3
+    BevelOuter = bvNone
+    ParentBackground = False
+    TabOrder = 0
     object Label1: TLabel
       Left = 11
       Top = 19
@@ -81,18 +83,291 @@ object frmUdpcast: TfrmUdpcast
     object edtFile: TEdit
       Left = 48
       Top = 16
-      Width = 185
+      Width = 180
       Height = 21
+      ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
       TabOrder = 0
+      Text = 'F:\sys\W98plus2.rar'
     end
     object btnTrans: TButton
-      Left = 272
+      Left = 320
       Top = 16
-      Width = 49
+      Width = 41
       Height = 22
       Caption = #20256#36755
-      TabOrder = 1
+      Enabled = False
+      TabOrder = 2
       OnClick = btnTransClick
+    end
+    object btnStart: TButton
+      Left = 272
+      Top = 16
+      Width = 41
+      Height = 22
+      Caption = #24320#22987
+      TabOrder = 1
+      OnClick = btnStartClick
+    end
+    object btnStop: TButton
+      Left = 368
+      Top = 16
+      Width = 41
+      Height = 22
+      Caption = #20572#27490
+      Enabled = False
+      TabOrder = 3
+      OnClick = btnStopClick
+    end
+  end
+  object pnl1: TPanel
+    Left = 224
+    Top = 65
+    Width = 359
+    Height = 261
+    Align = alRight
+    BevelOuter = bvNone
+    ParentBackground = False
+    TabOrder = 3
+    object grp1: TGroupBox
+      Left = 11
+      Top = 0
+      Width = 160
+      Height = 124
+      Caption = #29366#24577
+      TabOrder = 0
+      object lbl1: TLabel
+        Left = 10
+        Top = 24
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #24050#20256#36755' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lbl2: TLabel
+        Left = 10
+        Top = 45
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #21457#36895#24230' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lbl3: TLabel
+        Left = 10
+        Top = 67
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #37325#20256#22359' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lbl4: TLabel
+        Left = 10
+        Top = 88
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #29255#22823#23567' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lblSliceSize: TLabel
+        Left = 67
+        Top = 88
+        Width = 80
+        Height = 13
+        AutoSize = False
+        Caption = '0'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clGreen
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lblRexmit: TLabel
+        Left = 67
+        Top = 67
+        Width = 80
+        Height = 13
+        AutoSize = False
+        Caption = '0 (0%)'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clRed
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lblSpeed: TLabel
+        Left = 67
+        Top = 45
+        Width = 80
+        Height = 13
+        AutoSize = False
+        Caption = '0 MB/s'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clGreen
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lblTransBytes: TLabel
+        Left = 67
+        Top = 24
+        Width = 80
+        Height = 13
+        AutoSize = False
+        Caption = '0 MB'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clGreen
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+    end
+    object grp2: TGroupBox
+      Left = 177
+      Top = 0
+      Width = 170
+      Height = 124
+      Caption = #35774#32622
+      TabOrder = 1
+      object lbl5: TLabel
+        Left = 10
+        Top = 56
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #29255#22823#23567' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lbl6: TLabel
+        Left = 10
+        Top = 84
+        Width = 49
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #33258#24320#22987' :'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object chkAutoSliceSize: TCheckBox
+        Left = 16
+        Top = 24
+        Width = 121
+        Height = 17
+        Caption = #21160#24577#35843#25972#29255#22823#23567
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 0
+      end
+      object seSliceSize: TSpinEdit
+        Left = 64
+        Top = 52
+        Width = 49
+        Height = 22
+        Hint = '0 '#20351#29992#40664#35748
+        MaxLength = 4
+        MaxValue = 1024
+        MinValue = 0
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 1
+        Value = 0
+      end
+      object seWaitReceivers: TSpinEdit
+        Left = 64
+        Top = 80
+        Width = 49
+        Height = 22
+        Hint = #31561#24453#23458#25143#25968#65292'0 '#20026#25163#21160
+        MaxLength = 4
+        MaxValue = 1024
+        MinValue = 0
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 2
+        Value = 0
+      end
+    end
+    object grp3: TGroupBox
+      Left = 11
+      Top = 128
+      Width = 337
+      Height = 129
+      Caption = #20449#24687
+      TabOrder = 2
+      object mmoLog: TMemo
+        Left = 2
+        Top = 15
+        Width = 333
+        Height = 112
+        Align = alClient
+        BorderStyle = bsNone
+        Color = clBtnFace
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 13977088
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
+        ParentFont = False
+        ReadOnly = True
+        ScrollBars = ssBoth
+        TabOrder = 0
+      end
     end
   end
   object dlgOpen1: TOpenDialog
@@ -104,10 +379,10 @@ object frmUdpcast: TfrmUdpcast
     Top = 128
   end
   object ImageList1: TImageList
-    Left = 216
-    Top = 120
+    Left = 56
+    Top = 136
     Bitmap = {
-      494C010102000400040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010102000300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       000000000000000000000000000000000000FFFFFFFFFCFCFCFFF2F2F2FFE8E8
       E8FFE4E4E4FFE4E4E4FFE4E4E4FFE4E4E4FFE4E4E4FFE4E4E4FFE4E4E4FFE4E4
@@ -229,7 +504,7 @@ object frmUdpcast: TfrmUdpcast
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
-      000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFF
+      000000000000000000000000000000000000FFFFFF00FFFFFFFFFFFFFFFFFFFF
       FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
       FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
       FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF

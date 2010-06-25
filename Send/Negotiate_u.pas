@@ -1,22 +1,26 @@
+{$INCLUDE def.inc}
+
 unit Negotiate_u;
 
 interface
 uses
   Windows, Sysutils, WinSock, Func_u,
   Config_u, Protoc_u, SockLib_u, Console_u,
-  Participants_u, SendData_u,
+  Participants_u, SendData_u, Fifo_u,
   IStats_u, INegotiate_u;
 
 type                                    //不要直接使用对象,容易出错
   TNegotiate = class(TInterfacedObject, INegotiate)
   private
-    FUSocket: TUDPSocket;
+    FAbort: Boolean;
+    FUSocket: TUDPSenderSocket;
     FConfig: PNetConfig;
+    FIo: TDiskIO;
     FDp: TDataPool;
     FRc: TRChannel;
     FSender: TSender;
     FParts: TParticipants;
-    FStats: ISenderStats;
+    FStats: ITransStats;
     FOverEvent: THandle;
     FConsole: TConsole;                 //控制会话Select
   private
@@ -26,7 +30,8 @@ type                                    //不要直接使用对象,容易出错
     function CheckClientWait(firstConnected: PDWORD): Integer;
     function MainDispatcher(var tries: Integer; firstConnected: PDWORD): Integer;
   public
-    constructor Create(config: PNetConfig; Stats: ISenderStats);
+    constructor Create(config: PNetConfig; Console: TConsole; Stats: ITransStats;
+      OnPartsChange: TOnPartsChange);
     destructor Destroy; override;
     function StartNegotiate(): Integer;
     function StopNegotiate(): Boolean;
@@ -39,34 +44,36 @@ implementation
 
 { Negotiate }
 
-constructor TNegotiate.Create(config: PNetConfig; Stats: ISenderStats);
+constructor TNegotiate.Create;
 begin
   FConfig := config;
+  FConsole := Console;
   FStats := Stats;
   FParts := TParticipants.Create;
+  FParts.OnPartsChange := OnPartsChange;
   FOverEvent := CreateEvent(nil, True, False, nil);
-  FConsole := TConsole.Create;
 end;
 
 destructor TNegotiate.Destroy;
 begin
-  FreeAndNil(FConsole);
   SetEvent(FOverEvent);
   CloseHandle(FOverEvent);
-  if Assigned(FParts) then FreeAndNil(FParts);
+  if Assigned(FParts) then FParts.Free;
   if Assigned(FUSocket) then FreeAndNil(FUSocket);
   inherited;
 end;
 
 function TNegotiate.IsPointToPoint(): Boolean;
 begin
-  if Boolean(FConfig^.flags and FLAG_POINTOPOINT) then begin
+  if dmcPointToPoint in FConfig^.flags then begin
     if FParts.Count > 1 then
       raise Exception.CreateFmt('pointopoint mode set, and %d participants instead of 1',
         [FParts.Count]);
     Result := True;
   end else
-    if Boolean(FConfig^.flags and (FLAG_NOPOINTOPOINT or FLAG_ASYNC or FLAG_BCAST)) then
+    if (dmcNoPointToPoint in FConfig^.flags)
+      and (dmcAsyncMode in FConfig^.flags)
+      and (dmcBCastMode in FConfig^.flags) then
       Result := False
     else
       Result := FParts.Count = 1;
@@ -80,12 +87,10 @@ begin
   if (rcvbuf = 0) then
     rcvbuf := 65536;
 
-  if Boolean(capabilities and CAP_BIG_ENDIAN) then begin
+  if LongBool(capabilities and CAP_BIG_ENDIAN) then begin
     reply.opCode := htons(Word(CMD_CONNECT_REPLY));
-    reply.clNr := htonl(FParts.Add(client,
-      capabilities,
-      rcvbuf,
-      Boolean(FConfig^.flags and FLAG_POINTOPOINT)));
+    reply.clNr := htonl(FParts.Add(client, capabilities, rcvbuf,
+      dmcPointToPoint in FConfig^.flags));
     reply.blockSize := htonl(FConfig^.blockSize);
   end else begin
     raise Exception.Create('Little endian protocol no longer supported');
@@ -94,16 +99,15 @@ begin
 
   { new parameters: always big endian }
   reply.capabilities := ntohl(FConfig^.capabilities);
-  TUDPSocket.CopyIpToMessage(@FUSocket.DataAddr, reply.mcastAddr);
+  FUSocket.CopyDataAddrToMsg(reply.mcastAddr);
   { reply.mcastAddress = mcastAddress; }
   //rgWaitAll(config, sock, client^.sin_addr.s_addr, SizeOf(reply));
 
-  Result := FUSocket.SendCtrlMsg(reply, SizeOf(reply), client);
-  if (Result < 0) then begin
-{$IFDEF CONSOLE}
-    WriteLn('reply add new client. error:', GetLastError);
+  Result := FUSocket.SendCtrlMsgTo(reply, SizeOf(reply), client);
+{$IFDEF DMC_ERROR_ON}
+  if (Result < 0) then
+    FStats.Msg(umtError, 'reply add new client. error:' + IntToStr(GetLastError));
 {$ENDIF}
-  end;
 end;
 
 function TNegotiate.SendHello(streaming: Boolean): Integer;
@@ -117,11 +121,11 @@ begin
     hello.opCode := htons(Word(CMD_HELLO));
   hello.reserved := 0;
   hello.capabilities := htonl(FConfig^.capabilities);
-  FUSocket.CopyIpToMessage(@FUSocket.DataAddr, hello.mcastAddr);
+  FUSocket.CopyDataAddrToMsg(hello.mcastAddr);
   hello.blockSize := htons(FConfig^.blockSize);
   //rgWaitAll(net_config, sock, FConfig^.controlMcastAddr.sin_addr.s_addr, SizeOf(hello));
   //发送控制
-  Result := FUSocket.SendCtrlMsgCast(hello, SizeOf(hello));
+  Result := FUSocket.SendCtrlMsg(hello, SizeOf(hello));
 end;
 
 function TNegotiate.CheckClientWait(firstConnected: PDWORD): Integer;
@@ -129,10 +133,6 @@ begin
   Result := 0;
   if (FParts.Count < 1) or (firstConnected = nil) then
     Exit;                               { do not start: no receivers }
-  {
-   * If we have a max_client_wait, start the transfer after first client
-   * connected + maxSendWait
-   }
   if (FConfig^.max_receivers_wait > 0) and
     (DiffTickCount(firstConnected^, GetTickCount) > FConfig^.max_receivers_wait) then begin
 {$IFDEF USE_SYSLOG}
@@ -142,19 +142,9 @@ begin
     Result := 1;                        { send-wait passed: start }
     Exit;
   end
-
-    {
-     * Otherwise check to see if the minimum of clients
-     *  have checked in.
-     }
-  else if (FParts.Count >= FConfig^.min_receivers) and
-    {
-*  If there are enough clients and there's a min wait time, we'll
-*  wait around anyway until then.
-*  Otherwise, we always transfer
-}
-  ((FConfig^.min_receivers_wait = 0) or
-    (DiffTickCount(firstConnected^, GetTickCount) >= FConfig^.min_receivers_wait)) then begin
+  else if (FParts.Count >= FConfig^.min_receivers)
+    and ((FConfig^.min_receivers_wait = 0)
+    or (DiffTickCount(firstConnected^, GetTickCount) >= FConfig^.min_receivers_wait)) then begin
 {$IFDEF USE_SYSLOG}
     syslog(LOG_INFO, 'min receivers[%d] reached: starting',
       FConfig^.min_receivers);
@@ -164,25 +154,13 @@ begin
   end;
 end;
 
-{ *****************************************************
- * Receive and process a localization enquiry by a client
- * Params:
- * fd		- file descriptor for network socket on which to receiver
- *		client requests
- * db		- participant database
- * disk_config	- disk configuration
- * net_config	- network configuration
- * keyboardFd	- keyboard filedescriptor (-1 if keyboard inaccessible,
- *		or configured away)
- * tries	- how many hello messages have been sent?
- * firstConnected - when did the first client connect?
- }
+//接收，处理消息
 
 function TNegotiate.MainDispatcher(var tries: Integer; firstConnected: PDWORD): Integer;
 var
   selected          : Integer;
   client            : TSockAddrIn;
-  fromClient        : TCtrlMsg;
+  ctrlMsg           : TCtrlMsg;
   msgLength         : Integer;
   loopStart         : DWORD;
 
@@ -191,11 +169,11 @@ begin
   Result := 0;
   loopStart := GetTickCount;
 
-  if (FParts.Count > 0) or Boolean(FConfig^.flags and FLAG_ASYNC)
-    and not Boolean(FConfig^.flags and FLAG_NOKBD) then
+  if (FParts.Count > 0) or (dmcAsyncMode in FConfig^.flags)
+    and not (dmcNoKeyBoard in FConfig^.flags) then
   begin
-{$IFDEF CONSOLE}
-    WriteLn('Ready. Press return to start sending data.');
+{$IFDEF DMC_MSG_ON}
+    FStats.Msg(umtMsg, 'Ready. Press return to start sending data.');
 {$ENDIF}
   end;
 
@@ -209,8 +187,8 @@ begin
 {$ENDIF}
   end;
 
-  while (Result = 0) do begin
-
+  while (Result = 0) do
+  begin
     if (FConfig^.rexmit_hello_interval > 0) then begin
       waitTime := FConfig^.rexmit_hello_interval;
     end else if (firstConnected <> nil) and (FParts.Count > 0)
@@ -247,33 +225,33 @@ begin
     if (Result <> 0) and (FConfig^.startTimeout > 0) and
       (DiffTickCount(loopStart, GetTickCount) >= FConfig^.startTimeout) then begin
       Result := -1;
-      Break;
     end;
   end;                                  //end while
 
+  if selected < 1 then Exit;
   //有客户连接
   Result := 0;
-  FillChar(fromClient, SizeOf(fromClient), 0); { Zero it out in order to cope with short messages
+  FillChar(ctrlMsg, SizeOf(ctrlMsg), 0); { Zero it out in order to cope with short messages
   * from older versions }
 
-  msgLength := FUSocket.RecvCtrlMsg(fromClient, client);
+  msgLength := FUSocket.RecvCtrlMsg(ctrlMsg, SizeOf(ctrlMsg), client);
   if (msgLength < 0) then begin
-{$IFDEF CONSOLE}
-    WriteLn('problem getting data from client.errorno:', GetLastError);
+{$IFDEF DMC_ERROR_ON}
+    FStats.Msg(umtError, Format('RecvCtrlMsg Error! %d', [GetLastError]));
 {$ENDIF}
     Exit;                               { don't panic if we get weird messages }
   end;
 
-  if Boolean(FConfig^.flags and FLAG_ASYNC) then
+  if dmcAsyncMode in FConfig^.flags then
     Exit;
 
-  case TOpCode(ntohs(fromClient.opCode)) of
+  case TOpCode(ntohs(ctrlMsg.opCode)) of
     CMD_CONNECT_REQ:
       begin
         sendConnectionReply(@client,
           CAP_BIG_ENDIAN or
-          ntohl(fromClient.connectReq.capabilities),
-          ntohl(fromClient.connectReq.rcvbuf));
+          ntohl(ctrlMsg.connectReq.capabilities),
+          ntohl(ctrlMsg.connectReq.rcvbuf));
       end;
 
     CMD_GO:
@@ -286,9 +264,9 @@ begin
         FParts.Remove(FParts.Lookup(@client));
       end;
   else begin
-{$IFDEF CONSOLE}
-      WriteLn(Format('Unexpected command %-.4x',
-        [ntohs(fromClient.opCode)]));
+{$IFDEF DMC_WARN_ON}
+      FStats.Msg(umtWarn, Format('Unexpected command %-.4x',
+        [ntohs(ctrlMsg.opCode)]));
 {$ENDIF}
     end;
   end;
@@ -299,28 +277,38 @@ var
   tries             : Integer;
   firstConnected    : DWORD;
   firstConnectedP   : PDWORD;
+  tryFullDuplex     : Boolean;
 begin
+  FAbort := False;
+
   tries := 0;
   Result := 0;
   firstConnected := 0;
 
   { make the socket and print banner }
-  FUSocket := TUDPSocket.Create(FConfig, True);
+  tryFullDuplex := not (dmcFullDuplex in FConfig^.flags)
+    and not (dmcNotFullDuplex in FConfig^.flags);
 
-{$IFDEF CONSOLE}
-  //if disk_config^.pipeName = nil then Write('Compressed ');
-  Write('UDP sender for ');
-  //if disk_config^.fileName = nil then Write('(stdin)')
-  //else
-  Write(FConfig^.fileName);
-  Write(' at ');
-  Write(inet_ntoa(FUSocket.NetIf.addr));
-  WriteLn(' on ', FUSocket.NetIf.name);
-  WriteLn('Broadcasting control to ', inet_ntoa(FUSocket.CtrlAddr.sin_addr));
+  FUSocket := TUDPSenderSocket.Create(FConfig,
+    dmcPointToPoint in FConfig^.flags, tryFullDuplex);
+
+  if tryFullDuplex then
+    FConfig^.flags := FConfig^.flags + [dmcFullDuplex];
+
+{$IFDEF DMC_MSG_ON}
+  if dmcFullDuplex in FConfig^.flags then
+    FStats.Msg(umtMsg, 'Using full duplex mode');
+
+  FStats.Msg(umtMsg, Format('Broadcasting control to %s:%d',
+    [inet_ntoa(FUSocket.CtrlAddr.sin_addr), FConfig^.remotePort]));
+
+  FStats.Msg(umtMsg, Format('DMC Sender for %s at %s:%d on %s',
+    [FConfig^.fileName, inet_ntoa(FUSocket.NetIf.addr),
+    FConfig^.localPort, FUSocket.NetIf.name]));
 {$ENDIF}
 
   FConfig^.capabilities := SENDER_CAPABILITIES;
-  if Boolean(FConfig^.flags and FLAG_ASYNC) then
+  if dmcAsyncMode in FConfig^.flags then
     FConfig^.capabilities := FConfig^.capabilities or CAP_ASYNC;
 
   SendHello(False);
@@ -332,7 +320,7 @@ begin
     firstConnectedP := nil;
 
   //开始分派
-  FConsole.Start(FUSocket.Socket, not Boolean(FConfig^.flags and FLAG_NOKBD));
+  FConsole.Start(FUSocket.Socket, not (dmcNoKeyBoard in FConfig^.flags));
   while True do begin
     Result := MainDispatcher(tries, firstConnectedP);
     if Result <> 0 then Break;
@@ -341,19 +329,22 @@ begin
   FConsole.Stop;
 
   if (Result = 1) then begin
-    if not Boolean(FConfig^.flags and FLAG_ASYNC) and (FParts.Count < 0) then
+    if not (dmcAsyncMode in FConfig^.flags) and (FParts.Count <= 0) then
     begin
       Result := 0;
-{$IFDEF CONSOLE}
-      WriteLn('No participants... exiting.');
+{$IFDEF DMC_MSG_ON}
+      FStats.Msg(umtMsg, 'No participants... exiting.');
 {$ENDIF}
     end;
   end;
+
+  if FAbort then Result := -1;
 end;
 
 function TNegotiate.StopNegotiate: Boolean;
 begin
-  Result := False;
+  Result := not FAbort;
+  FAbort := True;
   if Assigned(FConsole) then
     Result := FConsole.PostPressed;
 end;
@@ -363,6 +354,7 @@ var
   i                 : Integer;
   isPtP             : Boolean;
   pRcvBuf           : DWORD_PTR;
+  hFile             : THandle;
 begin
   isPtP := IsPointToPoint();
 
@@ -382,55 +374,57 @@ begin
         FConfig^.rcvbuf := pRcvBuf;
     end;
 
-{$IFDEF CONSOLE}
-  WriteLn(Format('Starting transfer.[Capabilities: %-.8x]', [FConfig^.capabilities]));
+{$IFDEF DMC_MSG_ON}
+  FStats.Msg(umtMsg, Format('Starting transfer.[Capabilities: %-.8x]',
+    [FConfig^.capabilities]));
+
+  FStats.Msg(umtMsg, 'Data address ' + inet_ntoa(FUSocket.DataAddr.sin_addr));
 {$ENDIF}
 
-  if not Boolean(FConfig^.capabilities and CAP_BIG_ENDIAN) then
+  if not LongBool(FConfig^.capabilities and CAP_BIG_ENDIAN) then
     raise Exception.Create('Peer with incompatible endianness');
 
-  if not Boolean(FConfig^.capabilities and CAP_NEW_GEN) then
-  begin                                 //不支持组播，又工...
+  if not LongBool(FConfig^.capabilities and CAP_NEW_GEN) then
+  begin                                 //不支持组播，双工...
     FUSocket.SetDataAddr(FUSocket.CtrlAddr.sin_addr);
-    FConfig^.flags := FConfig^.flags and not (FLAG_SN or FLAG_ASYNC);
+    FConfig^.flags := FConfig^.flags - [dmcFullDuplex, dmcNotFullDuplex];
   end else
   begin
-    if not Boolean(FConfig^.flags and (FLAG_STREAMING or FLAG_ASYNC)) then
-    begin                               //不是异步或流模式
+    if not (dmcAsyncMode in FConfig^.flags) and
+      not (dmcStreamMode in FConfig^.flags) then
+    begin                               //不是异步或流模式(接收者固定)
       if FUSocket.CtrlAddr.sin_addr.S_addr <> FUSocket.DataAddr.sin_addr.S_addr then
       begin                             //重设控制地址
         FUSocket.CopyIpFrom(@FUSocket.CtrlAddr, @FUSocket.DataAddr);
-{$IFDEF CONSOLE}
-        WriteLn('Reset control to ', inet_ntoa(FUSocket.CtrlAddr.sin_addr));
+{$IFDEF DMC_MSG_ON}
+        FStats.Msg(umtMsg, 'Reset control to ' + inet_ntoa(FUSocket.CtrlAddr.sin_addr));
 {$ENDIF}
       end;
     end;
   end;
 
+  FIo := TDiskIO.Create(FConfig^.fileName, FConfig^.blockSize, True);
   FDp := TDataPool.Create(FConfig, FStats);
-  FRc := TRChannel.Create(FConfig, FUSocket, FDp, FParts);
+  FRc := TRChannel.Create(FConfig, FUSocket, FDp, FParts, FStats);
   FSender := TSender.Create(FConfig, FDp, FRc, FParts, FStats);
-  FDp.InitData(FRc, FUSocket, Self);
+  FDp.Open(FIo, FRc, FUSocket, Self);
 
-  FDp.Resume;                           //唤醒数据池
+  FIo.Resume;                           //唤醒数据IO
   FRc.Resume;                           //唤醒反馈隧道
-  //Sender.Resume;
 
   FSender.Execute;                      //执行发送
   SetEvent(FOverEvent);
 
+  FDp.Close;
   FUSocket.Close;
   FRc.Terminate;
-  FDp.Terminate;
+  FIo.Terminate;
   FreeAndNil(FSender);
   FreeAndNil(FRc);
   FreeAndNil(FDp);
-
-{$IFDEF CONSOLE}
-  WriteLn(#13#10'Transfer complete.');
-{$ENDIF}
-{$IFDEF USE_SYSLOG}
-  syslog(LOG_INFO, 'Transfer complete.');
+  FreeAndNil(FIo);
+{$IFDEF DMC_MSG_ON}
+  FStats.Msg(umtMsg, 'Transfer complete.');
 {$ENDIF}
 
   { remove all participants }
@@ -442,12 +436,14 @@ function TNegotiate.AbortTransfer(waitTime: DWORD): Boolean;
 begin
   if Assigned(FSender) then begin
     FSender.Terminated := True;
+    FDp.Close;
     FUSocket.Close;
     FRc.Terminate;
-    FDp.Terminate;
+    FIo.Terminate;
     Result := WaitForSingleObject(FOverEvent, waitTime) = WAIT_OBJECT_0;
   end else
-    Result := True;
+    Result := StopNegotiate;
 end;
 
 end.
+

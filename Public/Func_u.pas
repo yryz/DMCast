@@ -13,28 +13,31 @@ uses
 //#define CLR_BIT(x, map) (map[POS(x,map)] &= ~MASK(x,map))
 //#define BIT_ISSET(x, map) (map[POS(x,map)] & MASK(x,map))
 
+{ BitsMap 使用delphi 2005及以上支持内联 }
 function bit_isset(x: Dword; m: PByteArray): Boolean;
 procedure set_bit(x: Dword; m: PByteArray);
 procedure clr_bit(x: Dword; m: PByteArray);
+
 function GetTickCountUSec(): DWORD;     //微秒计时器，1/1000 000秒
 function DiffTickCount(tOld, tNew: DWORD): DWORD; //计算活动时间差
 function GetSizeKMG(byteSize: Int64): string; //自动计算KB MB GB
 implementation
 
-function bit_isset(x: Dword; m: PByteArray): Boolean;
+function bit_isset(x: Dword; m: PByteArray): Boolean; {$IFNDEF VER150}inline; {$ENDIF}
 begin
   Result := Boolean(m[x div 8] and (1 shl (x mod 8)));
 end;
 
-procedure set_bit(x: Dword; m: PByteArray);
+procedure set_bit(x: Dword; m: PByteArray); {$IFNDEF VER150}inline; {$ENDIF}
 begin
   m[x div 8] := m[x div 8] or (1 shl (x mod 8));
 end;
 
-procedure clr_bit(x: Dword; m: PByteArray);
+procedure clr_bit(x: Dword; m: PByteArray); {$IFNDEF VER150}inline; {$ENDIF}
 begin
   m[x div 8] := m[x div 8] and not (1 shl (x mod 8));
 end;
+
 var
   Frequency         : Int64;
 
@@ -53,7 +56,7 @@ end;
 function DiffTickCount;                 //计算活动时间差
 begin
   if tNew >= tOld then Result := tNew - tOld
-  else Result := DWORD($FFFFFFFF) - tOld + tNew;
+  else Result := INFINITE - tOld + tNew;
 end;
 
 function GetSizeKMG(byteSize: Int64): string; //自动计算KB MB GB

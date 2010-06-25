@@ -1,5 +1,5 @@
 unit FuncLib;
-{$DEFINE SMALL} //¼õÐ¡Ìå»ý
+{$DEFINE SMALL}                         //¼õÐ¡Ìå»ý
 interface
 
 uses
@@ -8,14 +8,14 @@ uses
 type
   TStrArr = array of string;
 
-procedure OutDebug(s: string); //µ÷ÊÔÊä³ö
-procedure AbortProcess; //½áÊø½ø³Ì(Ò»°ãÔÚDLLÖÐÊ¹ÓÃ)
+procedure OutDebug(s: string);          //µ÷ÊÔÊä³ö
+procedure AbortProcess;                 //½áÊø½ø³Ì(Ò»°ãÔÚDLLÖÐÊ¹ÓÃ)
 
 function StrDec(const Str: string): string; //×Ö·û½âÃÜº¯”µ
 function GetFileVersion(FileName: string): Word;
-function GetFileSize(const Path: PChar): Int64;
+function GetFileSize(const Path: PAnsiChar): Int64;
 function GetSizeKMG(byteSize: Int64): string; //×Ô¶¯¼ÆËãKB MB GB
-function GetModulePath(hinst: Cardinal; DllName: PChar): PChar; //»ñµÃDLLËùÔÚÄ¿Â¼
+function GetModulePath(hinst: Cardinal; DllName: PAnsiChar): PAnsiChar; //»ñµÃDLLËùÔÚÄ¿Â¼
 procedure MousePosClick(x, y: Integer); //Êó±êµã»÷Ö¸¶¨×ø±ê
 
 function RandStr(minLen, maxLen: WORD): string; //Ëæ»ú×Ö·û
@@ -24,29 +24,34 @@ function GetSubStrEx(const _Str, _Start, _End: string; var _LastStr: string {ÓàÏ
 function SplitStrArr(const Separators, sContent: string; var StrArr: TStrArr): Integer;
 
 function MyPos(c: Char; const Str: string): Integer; //×Ô¶¨ÒåµÄ Pos º¯Êý ËÙ¶ÈÌáÉý5±¶
-function SetPrivilege(const Privilege: PChar): boolean; //SeShutdownPrivilege ¹Ø»úÈ¨ÏÞ  SeDebugPrivilege µ÷ÊÔÈ¨ÏÞ
-function RegDelValue(const Key, Vname: PChar): boolean; //É¾³ý×¢²á±íÖµ
-function RegReadStr(const Key, Vname: PChar): string; //¶Á×¢²á±í str
-function RegReadInt(const Key, Vname: PChar): DWORD; //¶Á×¢²á±íInteger
-function RegWriteStr(const Key, Vname, Value: PChar): boolean; //Ð´STR
-function RegWriteInt(const Key, Vname: PChar; const Value: Integer): boolean; //Ð´DWORD
+function SetPrivilege(const Privilege: PAnsiChar): boolean; //SeShutdownPrivilege ¹Ø»úÈ¨ÏÞ  SeDebugPrivilege µ÷ÊÔÈ¨ÏÞ
+function RegDelValue(const Key, Vname: PAnsiChar): boolean; //É¾³ý×¢²á±íÖµ
+function RegReadStr(const Key, Vname: PAnsiChar): string; //¶Á×¢²á±í str
+function RegReadInt(const Key, Vname: PAnsiChar): DWORD; //¶Á×¢²á±íInteger
+function RegWriteStr(const Key, Vname, Value: PAnsiChar): boolean; //Ð´STR
+function RegWriteInt(const Key, Vname: PAnsiChar; const Value: Integer): boolean; //Ð´DWORD
 
 function CopyFileAndDir(const source, dest: string): boolean; //¸´ÖÆÎÄ¼þºÍÄ¿Â¼
 function DelFileAndDir(const source: string): boolean; //É¾³ýÎÄ¼þºÍÄ¿Â¼
 
 function WaitForExec(const CommLine: string; const Time, cmdShow: Cardinal): Cardinal; //´´½¨½ø³Ì²¢µÈ´ý·µ»ØPID
-function SelectDesktop(pName: PChar): boolean; stdcall; //Ñ¡Ôñ×ÀÃæ
+function SelectDesktop(pName: PAnsiChar): boolean; stdcall; //Ñ¡Ôñ×ÀÃæ
 function InputDesktopSelected: boolean; stdcall; //ÊÇ·ñÎªµ±Ç°×ÀÃæ
 
 function JavaScriptEscape(const s: string): string; //JAVASCRIPT×ªÒå×Ö·û
 {$IFNDEF SMALL}
 function RunJavaScript(const JsCode, JsVar: string): string; //  ²ÎÊý JsCode ÊÇÒªÖ´ÐÐµÄ Js ´úÂë; ²ÎÊý JsVar ÊÇÒª·µ»ØµÄ±äÁ¿
 {$ENDIF}
+
+function GetTickCountUSec(): DWORD;     //Î¢Ãë¼ÆÊ±Æ÷£¬1/1000 000Ãë
+function DiffTickCount(tOld, tNew: DWORD): DWORD; //¼ÆËã»î¶¯Ê±¼ä²î
+function MSecondToTimeStr(ms: Cardinal): string;
+
 implementation
 
 procedure OutDebug(s: string);
 begin
-  OutputDebugString(PChar(s));
+  OutputDebugString(PAnsiChar(s));
 end;
 
 procedure AbortProcess;
@@ -56,9 +61,9 @@ end;
 
 function StrDec(const Str: string): string; //×Ö·û½âÃÜº¯”µ
 const
-  XorKey: array[0..7] of Byte = ($B2, $09, $AA, $55, $93, $6D, $84, $47); //×Ö·û´®¼ÓÃÜÓÃ
+  XorKey            : array[0..7] of Byte = ($B2, $09, $AA, $55, $93, $6D, $84, $47); //×Ö·û´®¼ÓÃÜÓÃ
 var
-  i, j: Integer;
+  i, j              : Integer;
 begin
   Result := '';
   j := 0;
@@ -88,11 +93,11 @@ type
     dwFileDateLS: longint;
   end;
 var
-  ExeNames: array[0..255] of char;
-  VerInfo: PVerInfo;
-  Buf: pointer;
-  Sz: word;
-  L, Len: Cardinal;
+  ExeNames          : array[0..255] of char;
+  VerInfo           : PVerInfo;
+  Buf               : pointer;
+  Sz                : word;
+  L, Len            : Cardinal;
 begin
   Result := 0;
   StrPCopy(ExeNames, FileName);
@@ -120,10 +125,10 @@ begin
   end;
 end;
 
-function GetFileSize(const Path: PChar): Int64;
+function GetFileSize(const Path: PAnsiChar): Int64;
 var
-  FindHandle: THandle;
-  FindData: TWin32FindData;
+  FindHandle        : THandle;
+  FindData          : TWin32FindData;
 begin
   FindHandle := FindFirstFile(Path, FindData);
   if FindHandle <> INVALID_HANDLE_VALUE then
@@ -148,14 +153,14 @@ end;
   ×÷Õß:      HouSoft
   ÈÕÆÚ:      2009.12.01
   ²ÎÊý:      Ä£¿éÊµÀý  Ä£¿éÃû (Ä£¿éÊµÀýÎª0Ê±Ä£¿éÃû²ÅÓÐÐ§)
-  ·µ»ØÖµ:    PChar
+  ·µ»ØÖµ:    PAnsiChar
 -------------------------------------------------------------------------------}
 
-function GetModulePath(hinst: Cardinal; DllName: PChar): PChar;
+function GetModulePath(hinst: Cardinal; DllName: PAnsiChar): PAnsiChar;
 var
-  i, n: Integer;
-  szFilePath: array[0..MAX_PATH] of Char;
-  lpPath: PChar;
+  i, n              : Integer;
+  szFilePath        : array[0..MAX_PATH] of Char;
+  lpPath            : PAnsiChar;
 begin
   if hInst > 0 then
     GetModuleFileName(hInst, szFilePath, MAX_PATH)
@@ -168,13 +173,13 @@ begin
       #0: Break;
     end;
   szFilePath[n + 1] := #0;
-  Result := szFilePath; //´Ë´¦Àí,¿ÉÈÃDLLµ÷ÓÃÖÐ²»»á³ö´í
+  Result := szFilePath;                 //´Ë´¦Àí,¿ÉÈÃDLLµ÷ÓÃÖÐ²»»á³ö´í
 end;
 
 
 procedure MousePosClick(x, y: Integer);
 var
-  lpPoint: TPoint;
+  lpPoint           : TPoint;
 begin
   GetCursorPos(lpPoint);
   SetCursorPos(x, y);
@@ -185,12 +190,12 @@ end;
 
 function RandStr(minLen, maxLen: WORD): string;
 const
-  USER_CHARS = 'abcdefghijklmnopurstuvwxyz1234567890';
+  USER_CHARS        = 'abcdefghijklmnopurstuvwxyz1234567890';
 var
-  i: Integer;
-  sRet: string;
-  randLen: integer;
-  randChar: Char;
+  i                 : Integer;
+  sRet              : string;
+  randLen           : integer;
+  randChar          : Char;
 begin
   sRet := '';
   randLen := minLen + (GetTickCount() + 1) mod (maxLen - minLen); //Ëæ»ú³¤¶È
@@ -199,7 +204,7 @@ begin
   begin
     randChar := USER_CHARS[(Random(GetTickCount) + 1) mod (Length(USER_CHARS) - 1)]; //Ëæ»ú×Ö·û
     if ((i = 1) and (randChar in ['0'..'9'])) or
-      (i = randLen) then //¿ªÍ·²»ÄÜÎªÊý×Ö
+      (i = randLen) then                //¿ªÍ·²»ÄÜÎªÊý×Ö
       randChar := Char(Ord('a') + (GetTickCount() + 1) mod 25);
     sRet[i] := randChar;
   end;
@@ -209,7 +214,7 @@ end;
 function GetSubStr(const _Str, _Start, _End: string): string;
 //20100306
 var
-  Index: Integer;
+  Index             : Integer;
 begin
   if _Start <> '' then
   begin
@@ -234,7 +239,7 @@ end;
 function GetSubStrEx(const _Str, _Start, _End: string; var _LastStr: string {ÓàÏÂ²¿·Ö}): string;
 //20100306 Pos ±È StrPos ¿ì 1.5±¶
 var
-  Index: Integer;
+  Index             : Integer;
 begin
   if _Start <> '' then
   begin
@@ -261,7 +266,7 @@ end;
 
 function SplitStrArr(const Separators, sContent: string; var StrArr: TStrArr): Integer;
 var
-  sStr, sTmp: string;
+  sStr, sTmp        : string;
 begin
   Result := 0;
   SetLength(StrArr, Result);
@@ -281,7 +286,7 @@ end;
 
 function MyPos(c: Char; const Str: string): Integer;
 var
-  i: Integer;
+  i                 : Integer;
 begin
   Result := 0;
   for i := 1 to Length(Str) do
@@ -291,12 +296,12 @@ begin
     end;
 end;
 
-function SetPrivilege(const Privilege: PChar): boolean; //È¨ÏÞ
+function SetPrivilege(const Privilege: PAnsiChar): boolean; //È¨ÏÞ
 var
   OldTokenPrivileges, TokenPrivileges: TTokenPrivileges;
-  ReturnLength: DWORD;
-  hToken: THandle;
-  luid: Int64;
+  ReturnLength      : DWORD;
+  hToken            : THandle;
+  luid              : Int64;
 begin
   OpenProcessToken(GetCurrentProcess, TOKEN_ADJUST_PRIVILEGES, hToken);
   LookupPrivilegeValue(nil, Privilege, luid);
@@ -311,9 +316,9 @@ begin
 end;
 {----------end-------------}
 
-function RegDelValue(const Key, Vname: PChar): boolean; //É¾³ý×¢²á±íÖµ
+function RegDelValue(const Key, Vname: PAnsiChar): boolean; //É¾³ý×¢²á±íÖµ
 var
-  hk: HKEY;
+  hk                : HKEY;
 begin
   Result := false;
   if RegOpenKey(HKEY_LOCAL_MACHINE, Key, hk) = ERROR_SUCCESS then
@@ -321,11 +326,11 @@ begin
   RegCloseKey(hk);
 end;
 
-function RegReadStr(const Key, Vname: PChar): string; //¶Á×¢²á±í str
+function RegReadStr(const Key, Vname: PAnsiChar): string; //¶Á×¢²á±í str
 var
-  hk: HKEY;
-  dwSize: DWORD;
-  S: array[0..255] of Char;
+  hk                : HKEY;
+  dwSize            : DWORD;
+  S                 : array[0..255] of Char;
 begin
   Result := '';
   dwSize := 256;
@@ -334,10 +339,10 @@ begin
   RegCloseKey(hk);
 end;
 
-function RegReadInt(const Key, Vname: PChar): DWORD; //¶Á×¢²á±íInteger
+function RegReadInt(const Key, Vname: PAnsiChar): DWORD; //¶Á×¢²á±íInteger
 var
-  hk: HKEY;
-  dwSize, S: DWORD;
+  hk                : HKEY;
+  dwSize, S         : DWORD;
 begin
   Result := 3;
   dwSize := 256;
@@ -346,10 +351,10 @@ begin
   RegCloseKey(hk);
 end;
 
-function RegWriteStr(const Key, Vname, Value: PChar): boolean; //Ð´STR
+function RegWriteStr(const Key, Vname, Value: PAnsiChar): boolean; //Ð´STR
 var
-  hk: HKEY;
-  D: DWORD;
+  hk                : HKEY;
+  D                 : DWORD;
 begin
   Result := false;
   D := REG_CREATED_NEW_KEY;
@@ -358,10 +363,10 @@ begin
   RegCloseKey(hk);
 end;
 
-function RegWriteInt(const Key, Vname: PChar; const Value: Integer): boolean; //Ð´DWORD
+function RegWriteInt(const Key, Vname: PAnsiChar; const Value: Integer): boolean; //Ð´DWORD
 var
-  hk: HKEY;
-  D: DWORD;
+  hk                : HKEY;
+  D                 : DWORD;
 begin
   Result := false;
   D := REG_CREATED_NEW_KEY;
@@ -374,14 +379,14 @@ end;
 
 function CopyFileAndDir(const source, dest: string): boolean;
 var
-  fo: TSHFILEOPSTRUCT;
+  fo                : TSHFILEOPSTRUCT;
 begin
   FillChar(fo, SizeOf(fo), 0);
   with fo do begin
     Wnd := 0;
     wFunc := FO_Copy;
-    pFrom := PChar(source + #0);
-    pTo := PChar(dest + #0);
+    pFrom := PAnsiChar(source + #0);
+    pTo := PAnsiChar(dest + #0);
     fFlags := FOF_NOCONFIRMATION or FOF_NOERRORUI or FOF_SILENT;
   end;
   Result := (SHFileOperation(fo) = 0);
@@ -389,13 +394,13 @@ end;
 
 function DelFileAndDir(const source: string): boolean;
 var
-  fo: TSHFILEOPSTRUCT;
+  fo                : TSHFILEOPSTRUCT;
 begin
   FillChar(fo, SizeOf(fo), 0);
   with fo do begin
     Wnd := 0;
     wFunc := FO_DELETE;
-    pFrom := PChar(source + #0);
+    pFrom := PAnsiChar(source + #0);
     pTo := #0#0;
     fFlags := FOF_NOCONFIRMATION + FOF_SILENT;
   end;
@@ -405,14 +410,14 @@ end;
 
 function WaitForExec(const CommLine: string; const Time, cmdShow: Cardinal): Cardinal; //´´½¨½ø³Ì²¢µÈ´ý·µ»ØPID
 var
-  si: STARTUPINFO;
-  pi: PROCESS_INFORMATION;
+  si                : STARTUPINFO;
+  pi                : PROCESS_INFORMATION;
 begin
   ZeroMemory(@si, SizeOf(si));
   si.cb := SizeOf(si);
   si.dwFlags := STARTF_USESHOWWINDOW;
   si.wShowWindow := cmdShow;
-  CreateProcess(nil, PChar(CommLine), nil, nil, false, CREATE_DEFAULT_ERROR_MODE, nil, nil, si, pi);
+  CreateProcess(nil, PAnsiChar(CommLine), nil, nil, false, CREATE_DEFAULT_ERROR_MODE, nil, nil, si, pi);
   WaitForSingleObject(pi.hProcess, Time);
   Result := pi.dwProcessID;
 end;
@@ -421,9 +426,9 @@ end;
 
 function SelectHDESK(HNewDesk: HDESK): boolean; stdcall;
 var
-  HOldDesk: HDESK;
-  dwDummy: DWORD;
-  sName: array[0..255] of Char;
+  HOldDesk          : HDESK;
+  dwDummy           : DWORD;
+  sName             : array[0..255] of Char;
 begin
   Result := false;
   HOldDesk := GetThreadDesktop(GetCurrentThreadId);
@@ -442,9 +447,9 @@ begin
   Result := True;
 end;
 
-function SelectDesktop(pName: PChar): boolean; stdcall;
+function SelectDesktop(pName: PAnsiChar): boolean; stdcall;
 var
-  HDesktop: HDESK;
+  HDesktop          : HDESK;
 begin
   Result := false;
   if Assigned(pName) then
@@ -460,7 +465,7 @@ begin
       DESKTOP_WRITEOBJECTS or DESKTOP_READOBJECTS or
       DESKTOP_SWITCHDESKTOP or GENERIC_WRITE);
   if (HDesktop = 0) then begin
-    //OutputDebugString(PChar('Get Desktop Failed: ' + IntToStr(GetLastError)));
+    //OutputDebugString(PAnsiChar('Get Desktop Failed: ' + IntToStr(GetLastError)));
     exit;
   end;
   Result := SelectHDESK(HDesktop);
@@ -468,12 +473,12 @@ end;
 
 function InputDesktopSelected: boolean; stdcall;
 var
-  HThdDesk: HDESK;
-  HInpDesk: HDESK;
+  HThdDesk          : HDESK;
+  HInpDesk          : HDESK;
   //dwError: DWORD;
-  dwDummy: DWORD;
-  sThdName: array[0..255] of Char;
-  sInpName: array[0..255] of Char;
+  dwDummy           : DWORD;
+  sThdName          : array[0..255] of Char;
+  sInpName          : array[0..255] of Char;
 begin
   Result := false;
   HThdDesk := GetThreadDesktop(GetCurrentThreadId);
@@ -517,8 +522,8 @@ end;
 
 function JavaScriptEscape(const s: string): string;
 var
-  i: Integer;
-  sTmp: string;
+  i                 : Integer;
+  sTmp              : string;
 begin
   sTmp := '';
   if Length(s) > 0 then
@@ -544,7 +549,7 @@ end;
 
 function RunJavaScript(const JsCode, JsVar: string): string;
 var
-  script: OleVariant;
+  script            : OleVariant;
 begin
   try
     CoInitialize(nil);
@@ -558,5 +563,42 @@ begin
   end;
 end;
 {$ENDIF}
+
+var
+  Frequency         : Int64;
+
+function GetTickCountUSec;              //±È GetTickCount¾«¶È¸ß25~30ºÁÃë
+var
+  lpPerformanceCount: Int64;
+begin
+  if Frequency = 0 then begin
+    QueryPerformanceFrequency(Frequency); //WINDOWS API ·µ»Ø¼ÆÊýÆµÂÊ(Intel86:1193180)(»ñµÃÏµÍ³µÄ¸ßÐÔÄÜÆµÂÊ¼ÆÊýÆ÷ÔÚÒ»ÃëÄÚµÄÕð¶¯´ÎÊý)
+    Frequency := Frequency div 1000000; //Ò»Î¢ÃëÄÚÕñ¶¯´ÎÊý
+  end;
+  QueryPerformanceCounter(lpPerformanceCount);
+  Result := lpPerformanceCount div Frequency;
+end;
+
+function DiffTickCount;                 //¼ÆËã»î¶¯Ê±¼ä²î
+begin
+  if tNew >= tOld then Result := tNew - tOld
+  else Result := DWORD($FFFFFFFF) - tOld + tNew;
+end;
+
+function MSecondToTimeStr;
+var
+  Day, Hour, Min, Sec: Word;
+begin
+  Sec := ms div 1000;
+  Min := ms div (1000 * 60);
+  Hour := ms div (1000 * 60 * 60);
+  Day := ms div (1000 * 60 * 60 * 24);
+  Result := '';
+  if Day > 0 then Result := Result + IntToStr(Day) + 'Ìì';
+  if Hour > 0 then Result := Result + IntToStr(Hour) + 'Ê±';
+  if Min > 0 then Result := Result + IntToStr(Min) + '·Ö';
+  if Sec > 0 then Result := Result + IntToStr(Sec) + 'Ãë';
+end;
+
 end.
 

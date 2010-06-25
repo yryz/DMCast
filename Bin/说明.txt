@@ -1,0 +1,8 @@
+DMCReceiver.exe 接收端
+
+使用 CMD
+   DMCReceiver.exe D:\Test.rar
+   
+DMCSender.exe 发送端
+
+使用 图形界面

@@ -1,8 +1,10 @@
+{$INCLUDE def.inc}
+
 unit Participants_u;
 
 interface
 uses
-  Windows, Sysutils, WinSock, Config_u, Func_u;
+  Windows, Sysutils, WinSock, Config_u, Func_u, INegotiate_u;
 
 type
   PClientDesc = ^TClientDesc;
@@ -20,6 +22,7 @@ type
   private
     FCount: Integer;
     FClientTable: TClientTable;
+    FOnPartsChange: TOnPartsChange;
   public
     constructor Create();
     destructor Destroy; override;
@@ -37,6 +40,7 @@ type
     procedure PrintSet(d: PByteArray);
   published
     property Count: Integer read FCount;
+    property OnPartsChange: TOnPartsChange read FOnPartsChange write FOnPartsChange;
   end;
 
 implementation
@@ -45,7 +49,6 @@ implementation
 
 constructor TParticipants.Create;
 begin
-
 end;
 
 destructor TParticipants.Destroy;
@@ -59,15 +62,17 @@ var
   i                 : Integer;
 begin
   i := Lookup(addr);
-  if (i >= 0) then begin
-    Result := i;
-    Exit;
-  end;
+  Result := i;
+  if i >= 0 then Exit;
 
   for i := 0 to MAX_CLIENTS - 1 do
   begin
-    if (not FClientTable[i].used) then
+    if not FClientTable[i].used then
     begin
+      if Assigned(FOnPartsChange) then
+        if not FOnPartsChange(True, i, addr) then
+          Exit;
+
       FClientTable[i].addr := addr^;
       FClientTable[i].used := True;
       FClientTable[i].capabilities := capabilities;
@@ -76,19 +81,13 @@ begin
 {$IFDEF CONSOLE}
       WriteLn(Format('New connection from %s  (#%d) [Capabilities %-.8x]',
         [inet_ntoa(addr^.sin_addr), i, capabilities]));
-{$ELSE}
+{$ENDIF}
 
-{$ENDIF}
-{$IFDEF USE_SYSLOG }
-      syslog(LOG_INFO, 'New connection from %s  (#%d)',
-        getIpString(addr, ipBuffer), i);
-{$ENDIF}
       Result := i;
       Exit;
     end else if (pointopoint) then
       Break;
   end;
-  Result := -1;                         {no space left in participant's table}
 end;
 
 function TParticipants.GetClientDesc(i: Integer): PClientDesc;
@@ -185,16 +184,21 @@ end;
 function TParticipants.Remove(i: Integer): Boolean;
 begin
   Result := IsValid(i);
-  if Result then
-  begin
-    FClientTable[i].used := False;
-    Dec(FCount);
+  if Result then begin
+    if Assigned(FOnPartsChange) then
+      Result := FOnPartsChange(False, i, @FClientTable[i].addr);
+
+    if Result then
+    begin
+      FClientTable[i].used := False;
+      Dec(FCount);
 {$IFDEF CONSOLE}
-    WriteLn(Format('Disconnecting #%d (%s)',
-      [i, inet_ntoa(FClientTable[i].addr.sin_addr)]));
-{$ELSE}
+      WriteLn(Format('Disconnecting #%d (%s)',
+        [i, inet_ntoa(FClientTable[i].addr.sin_addr)]));
 {$ENDIF}
+    end;
   end;
 end;
 
 end.
+

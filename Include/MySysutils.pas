@@ -43,17 +43,6 @@ const
   faSymLink = $00000040 platform;
   faAnyFile = $0000003F;
 
-{ File open modes }
-  fmOpenRead = $0000;
-  fmOpenWrite = $0001;
-  fmOpenReadWrite = $0002;
-
-  fmShareCompat = $0000 platform; // DOS compatibility mode is not portable
-  fmShareExclusive = $0010;
-  fmShareDenyWrite = $0020;
-  fmShareDenyRead = $0030 platform; // write-only not supported on all platforms
-  fmShareDenyNone = $0040;
-
 //Caption := Format2('你叫%s?有%d岁了吧?你知道%我是谁吗?', ['HouSoft', 20, '我']);
 function Format2(const Format: string; const Args: array of const): string; //不支持浮点  20100313 Hou
 function FloatToStr2(const f: Double; const n: Integer): string;
@@ -90,12 +79,7 @@ procedure FreeAndNil(var Obj);
 
 function FindCmdLineSwitch(const Switch: string; const Chars: TSysCharSet;
   IgnoreCase: Boolean): Boolean;
- //20100317
-function FileCreate(const FileName: string): Integer;
-function FileWrite(Handle: Integer; const Buffer; Count: LongWord): Integer;
-function FileOpen(const FileName: string; Mode: LongWord): Integer;
-function FileRead(Handle: Integer; var Buffer; Count: LongWord): Integer;
-procedure FileClose(Handle: Integer);
+
 implementation
 
 function Format2(const Format: string; const Args: array of const): string;
@@ -455,11 +439,11 @@ asm
         MOV     ESI, ESP
         SUB     ESP, 16
         XOR     ECX, ECX       // base: 0 for signed decimal
-        PUSH    EDX            // Result ptr
+        PUSH    EDX            // result ptr
         XOR     EDX, EDX       // zero filled field width: 0 for no leading zeros
         CALL    CvtInt
         MOV     EDX, ESI
-        POP     EAX            // Result ptr
+        POP     EAX            // result ptr
         CALL    System.@LStrFromPCharLen
         ADD     ESP, 16
         POP     ESI
@@ -481,11 +465,11 @@ asm
 @A1:    PUSH    ESI
         MOV     ESI, ESP
         SUB     ESP, 32
-        PUSH    ECX            // Result ptr
+        PUSH    ECX            // result ptr
         MOV     ECX, 16        // base 16     EDX = Digits = field width
         CALL    CvtInt
         MOV     EDX, ESI
-        POP     EAX            // Result ptr
+        POP     EAX            // result ptr
         CALL    System.@LStrFromPCharLen
         ADD     ESP, 32
         POP     ESI
@@ -570,12 +554,12 @@ begin
   begin
     if (filename[i] = '/') or (filename[i] = '\') or (filename[i] = ':') then
     begin
-      Result := copy(filename, i + 1, maxint);
+      result := copy(filename, i + 1, maxint);
       exit;
     end;
     dec(i);
   end;
-  Result := filename;
+  result := filename;
 end;
 
 function DeleteFile(const FileName: string): Boolean;
@@ -677,74 +661,6 @@ begin
       end;
   end;
   Result := False;
-end;
-
-function FileCreate(const FileName: string): Integer;
-{$IFDEF MSWINDOWS}
-begin
-  Result := Integer(CreateFile(PChar(FileName), GENERIC_READ or GENERIC_WRITE,
-    0, nil, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0));
-end;
-{$ENDIF}
-{$IFDEF LINUX}
-begin
-  Result := FileCreate(FileName, FileAccessRights);
-end;
-{$ENDIF}
-
-function FileWrite(Handle: Integer; const Buffer; Count: LongWord): Integer;
-begin
-{$IFDEF MSWINDOWS}
-  if not WriteFile(THandle(Handle), Buffer, Count, LongWord(Result), nil) then
-    Result := -1;
-{$ENDIF}
-{$IFDEF LINUX}
-  Result := __Write(Handle, Buffer, Count);
-{$ENDIF}
-end;
-
-function FileOpen(const FileName: string; Mode: LongWord): Integer;
-{$IFDEF MSWINDOWS}
-const
-  AccessMode: array[0..2] of LongWord = (
-    GENERIC_READ,
-    GENERIC_WRITE,
-    GENERIC_READ or GENERIC_WRITE);
-  ShareMode: array[0..4] of LongWord = (
-    0,
-    0,
-    FILE_SHARE_READ,
-    FILE_SHARE_WRITE,
-    FILE_SHARE_READ or FILE_SHARE_WRITE);
-begin
-  Result := -1;
-  if ((Mode and 3) <= fmOpenReadWrite) and
-    ((Mode and $F0) <= fmShareDenyNone) then
-    Result := Integer(CreateFile(PChar(FileName), AccessMode[Mode and 3],
-      ShareMode[(Mode and $F0) shr 4], nil, OPEN_EXISTING,
-      FILE_ATTRIBUTE_NORMAL, 0));
-end;
-{$ENDIF}
-
-function FileRead(Handle: Integer; var Buffer; Count: LongWord): Integer;
-begin
-{$IFDEF MSWINDOWS}
-  if not ReadFile(THandle(Handle), Buffer, Count, LongWord(Result), nil) then
-    Result := -1;
-{$ENDIF}
-{$IFDEF LINUX}
-  Result := __read(Handle, Buffer, Count);
-{$ENDIF}
-end;
-
-procedure FileClose(Handle: Integer);
-begin
-{$IFDEF MSWINDOWS}
-  CloseHandle(THandle(Handle));
-{$ENDIF}
-{$IFDEF LINUX}
-  __close(Handle); // No need to unlock since all locks are released on close.
-{$ENDIF}
 end;
 
 end.

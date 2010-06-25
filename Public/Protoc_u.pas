@@ -4,6 +4,15 @@ interface
 uses
   Windows, WinSock, Config_u;
 
+const
+  MAX_FEC_INTERLEAVE = 256;
+  MIN_SLICE_SIZE    = 32;               //自动调整片大小时，最小限度
+  MAX_SLICE_SIZE    = 1024;             //最大片大小,最大10K左右，因MAX_SLICE_SIZE div BITS_PER_CHAR +Header(8)<1472
+  MAX_BLOCK_SIZE    = 1456;             //传输时1472，包含16字节头
+
+  BITS_PER_CHAR     = 8;
+  BITS_PER_INT      = SizeOf(Integer) * 8;
+
 type
   { Receiver to sender }
 
@@ -26,6 +35,7 @@ type
     CMD_DATA,                           { a block of data }
     CMD_FEC,                            { a forward-error-correction block }
 
+    CMD_HELLO,
     CMD_HELLO_NEW,                      { sender says he's up }
     CMD_HELLO_STREAMING                 { retransmitted hello during streaming mode }
     );
@@ -37,8 +47,6 @@ type
    * CMD_HELLO_NEW by default, and then phase out the old variant. }
   { Tried to remove this on 2009-08-30, but noticed that receiver was printing
    * "unexpected opcode" on retransmitted hello }
-const
-  CMD_HELLO         = $0500;
 
 type
   TOk = packed record
@@ -47,12 +55,13 @@ type
     sliceNo: Integer;
   end;
 
+  TBlocksMap = array[0..MAX_SLICE_SIZE div BITS_PER_CHAR - 1] of Byte;
   TRetransmit = packed record
     opCode: Word;
     reserved: SmallInt;
     sliceNo: Integer;
     rxmit: Integer;
-    map: array[0..MAX_SLICE_SIZE div BITS_PER_CHAR - 1] of char;
+    map: TBlocksMap;
   end;
 
   TConnectReq = packed record
@@ -136,7 +145,7 @@ type
     rxmit: Integer;
   end;
 
-  TServerDataMsg = packed record
+  TServerDataMsg = packed record        //16 byte
     case Integer of
       0: (opCode: Word);
       1: (reqack: TReqack);
@@ -181,6 +190,8 @@ const
 
 
 implementation
+uses
+  Fifo_u;
 
 initialization
   Assert(SizeOf(TRetransmit) < 1472);

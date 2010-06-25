@@ -6,15 +6,14 @@ uses
   Config_u, Func_u, IStats_u;
 
 type
-  TSenderStats = class(TInterfacedObject, ISenderStats)
+  TReceiverStats = class(TInterfacedObject, ITransStats)
   private
+    FTransmitting: Boolean;
     FConfig: PNetConfig;
     FStatPeriod: DWORD;                 //状态显示周期
     FPeriodStart: DWORD;                //周期开始节拍
     FLastPosBytes: Int64;               //最后统计进度
     FTotalBytes: Int64;                 //传输总数
-    FNrRetrans: Int64;                  //重传数
-    FIsFinal: Boolean;                  //End Trans
   protected
     procedure DoDisplay();
   public
@@ -24,67 +23,59 @@ type
     procedure BeginTrans();
     procedure EndTrans();
     procedure AddBytes(bytes: Integer);
-    procedure AddRetrans(nrRetrans: Integer);
+    procedure AddRetrans(nrRetrans: Integer);  virtual; abstract;
+    procedure Msg(msgType: TUMsgType; msg: string);
+    function Transmitting(): Boolean;
   end;
 
 implementation
 
-{ TSenderStats }
+{ TReceiverStats }
 
-constructor TSenderStats.Create(config: PNetConfig; statPeriod: Integer);
+constructor TReceiverStats.Create(config: PNetConfig; statPeriod: Integer);
 begin
   FConfig := config;
   FStatPeriod := statPeriod;
 end;
 
-destructor TSenderStats.Destroy;
+destructor TReceiverStats.Destroy;
 begin
   inherited;
 end;
 
-procedure TSenderStats.BeginTrans;
+procedure TReceiverStats.BeginTrans;
 begin
-  FIsFinal := False;
+  FTransmitting := True;
   FPeriodStart := GetTickCount;
 end;
 
-procedure TSenderStats.EndTrans;
+procedure TReceiverStats.EndTrans;
 begin
-  FIsFinal := True;
+  FTransmitting := False;
   DoDisplay;
 end;
 
-procedure TSenderStats.AddBytes(bytes: Integer);
+procedure TReceiverStats.AddBytes(bytes: Integer);
 begin
   Inc(FTotalBytes, bytes);
   DoDisplay;
 end;
 
-procedure TSenderStats.AddRetrans(nrRetrans: Integer);
-begin
-  Inc(FNrRetrans, nrRetrans);
-  DoDisplay;
-end;
-
-procedure TSenderStats.DoDisplay();
+procedure TReceiverStats.DoDisplay();
 var
   tickNow, tdiff    : DWORD;
   blocks            : dword;
-  bw, percent       : double;
+  bw                : double;
   hOut              : THandle;
   conBuf            : TConsoleScreenBufferInfo;
 begin
   tickNow := GetTickCount;
   tdiff := DiffTickCount(FPeriodStart, tickNow);
 
-  if not FIsFinal and (tdiff < FStatPeriod) then Exit;
+  if FTransmitting and (tdiff < FStatPeriod) then Exit;
 
   //带宽统计
   bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
-  //重传块统计
-  blocks := (FTotalBytes + FConfig^.blockSize - 1) div FConfig^.blockSize;
-  if (blocks = 0) then percent := 0
-  else percent := FNrRetrans / blocks;
   //显示状态
 {$IFDEF CONSOLE}
   hOut := GetStdHandle(STD_OUTPUT_HANDLE);
@@ -92,11 +83,23 @@ begin
   conBuf.dwCursorPosition.X := 0;
   SetConsoleCursorPosition(hOut, conBuf.dwCursorPosition);
 
-  Write(Format('bytes=%d speed=%s re-xmits=%d(%.2f%%) slice size=%d',
-    [FTotalBytes, GetSizeKMG(Trunc(bw)), FNrRetrans, percent, FConfig^.sliceSize]));
+  Write(Format('bytes=%d speed=%s', [FTotalBytes, GetSizeKMG(Trunc(bw))]));
 {$ENDIF}
   FPeriodStart := GetTickCount;
   FLastPosBytes := FTotalBytes;
 end;
 
+function TReceiverStats.Transmitting: Boolean;
+begin
+  Result := FTransmitting;
+end;
+
+procedure TReceiverStats.Msg(msgType: TUMsgType; msg: string);
+begin
+{$IFDEF CONSOLE}
+  writeln(msg);
+{$ENDIF}
+end;
+
 end.
+

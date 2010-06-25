@@ -128,7 +128,7 @@ var
   nBlock            : DWORD;
 begin
   if FHandles[1] > 0 then begin
-    TerminateThread(FHandles[1], 0);
+    TerminateThread(FHandles[1], Cardinal(-1));
     WaitForSingleObject(FHandles[1], INFINITE);
     FHandles[1] := 0;
   end;

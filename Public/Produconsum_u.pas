@@ -21,12 +21,12 @@ type
     FLock: TRTLCriticalSection;
     FConsumerIsWaiting: Boolean;
     FEvent: THandle;
-    FName: PChar;
+    FName: PAnsiChar;
   protected
     procedure WakeConsumer();
     function _ConsumeAny(minAmount, waitTime: UINT): Integer; //阻塞
   public
-    constructor Create(size: UINT; const name: PChar);
+    constructor Create(size: UINT; const name: PAnsiChar);
     destructor Destroy; override;
 
     procedure Produce(amount: UINT);    //产生
@@ -35,19 +35,19 @@ type
     function ConsumeAnyWithTimeout(waitTime: UINT): Integer; //获得至少1，直到超时
     function ConsumeAnyContiguous(): Integer; //获得连续的数据块,阻塞
     function ConsumeContiguousMinAmount(amount: UINT): Integer; //获得连续的缓冲区，至少x,阻塞
-    function Consume(amount: UINT): Integer; //请求消费x,阻塞
-    function Consumed(amount: UINT): Integer; //已消费
+    function Consume(amount: UINT): Integer; //请求消耗x,阻塞
+    function Consumed(amount: UINT): Integer; //已消耗
     function GetProducerPosition(): UINT; //获取生产者当前位置(由Produced移动)
-    function GetConsumerPosition(): UINT; //获取消费者当前位置(由Consumed移动)
+    function GetConsumerPosition(): UINT; //获取消耗者当前位置(由Consumed移动)
     function GetSize(): UINT;
-    function GetProducedAmount(): Integer; //获取目前等待被消耗的数据总量，不阻塞
+    function GetProducedAmount(): Integer; //获取目前可被消耗的数据总量，不阻塞
   end;
 
 implementation
 
 { TProduceConsum }
 
-constructor TProduceConsum.Create(size: UINT; const name: PChar);
+constructor TProduceConsum.Create(size: UINT; const name: PAnsiChar);
 begin
   Assert(size <= UINT(-1) div 2, '"size" Too Big!');
   FSize := size;
@@ -237,4 +237,3 @@ begin
 end;
 
 end.
-

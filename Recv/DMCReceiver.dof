@@ -100,7 +100,7 @@ Conditionals=
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
-RunParams=F:\NetBSD.i386cd-5.0.1.iso
+RunParams=z:\test.rar
 HostApplication=
 Launcher=
 UseLauncher=0
