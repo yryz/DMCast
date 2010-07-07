@@ -58,11 +58,12 @@ type
   TSenderStats = class(TInterfacedObject, ITransStats)
   private
     FConfig: PNetConfig;
-    FStatPeriod: DWORD;                 //状态显示周期
-    FPeriodStart: DWORD;                //周期开始节拍
-    FLastPosBytes: Int64;               //最后统计进度
-    FTotalBytes: Int64;                 //传输总数
-    FNrRetrans: Int64;                  //重传数
+    FStartTime: DWORD; //传输开始时间
+    FStatPeriod: DWORD; //状态显示周期
+    FPeriodStart: DWORD; //周期开始节拍
+    FLastPosBytes: Int64; //最后统计进度
+    FTotalBytes: Int64; //传输总数
+    FNrRetrans: Int64; //重传数
     FTransmitting: Boolean;
   protected
     procedure DoDisplay();
@@ -79,11 +80,11 @@ type
   end;
 
 var
-  frmCastFile       : TfrmCastFile;
-  dwThID            : DWORD;
-  g_Nego            : INegotiate;
-  g_Config          : TNetConfig;
-  g_FileName        : string;
+  frmCastFile: TfrmCastFile;
+  dwThID: DWORD;
+  g_Nego: INegotiate;
+  g_Config: TNetConfig;
+  g_FileName: string;
 
 implementation
 
@@ -105,7 +106,8 @@ end;
 procedure TSenderStats.BeginTrans;
 begin
   FTransmitting := True;
-  FPeriodStart := GetTickCount;
+  FStartTime := GetTickCount;
+  FPeriodStart := FStartTime;
 end;
 
 procedure TSenderStats.EndTrans;
@@ -128,17 +130,26 @@ end;
 
 procedure TSenderStats.DoDisplay();
 var
-  tickNow, tdiff    : DWORD;
-  blocks            : dword;
-  bw, percent       : double;
+  tickNow, tdiff: DWORD;
+  blocks: dword;
+  bw, percent: double;
 begin
   tickNow := GetTickCount;
-  tdiff := DiffTickCount(FPeriodStart, tickNow);
 
-  if FTransmitting and (tdiff < FStatPeriod) then Exit;
+  if FTransmitting then
+  begin
+    tdiff := DiffTickCount(FPeriodStart, tickNow);
+    if (tdiff < FStatPeriod) then Exit;
+    //带宽统计
+    bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
+  end else
+  begin
+    tdiff := DiffTickCount(FStartTime, tickNow);
+    if tdiff = 0 then tdiff := 1;
+   //平均带宽统计
+    bw := FTotalBytes / tdiff * 1000; // Byte/s
+  end;
 
-  //带宽统计
-  bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
   //重传块统计
   blocks := (FTotalBytes + FConfig^.blockSize - 1) div FConfig^.blockSize;
   if blocks = 0 then percent := 0
@@ -157,7 +168,7 @@ end;
 
 procedure TSenderStats.Msg(msgType: TUMsgType; msg: string);
 var
-  s                 : string;
+  s: string;
 begin
   s := '[' + DMC_MSG_TYPE[msgType] + '] ' + msg;
   frmCastFile.mmoLog.Lines.Insert(0, s);
@@ -184,7 +195,7 @@ end;
 function TfrmCastFile.OnPartsChange(isAdd: Boolean; index: Integer;
   addr: PSockAddrIn): Boolean;
 var
-  Item              : TListItem;
+  Item: TListItem;
 begin
   Result := True;
   if isAdd then
@@ -208,7 +219,7 @@ end;
 
 procedure TfrmCastFile.btnStartClick(Sender: TObject);
 begin
-  g_FileName := edtFile.Text;           //防止“引用”出错
+  g_FileName := edtFile.Text; //防止“引用”出错
   if FileExists(g_FileName) then
   begin
     pb1.Position := 0;
@@ -220,16 +231,16 @@ begin
     //配置
     FillChar(g_Config, SizeOf(g_Config), 0);
 
-    g_Config.ifName := 'eth0';          //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
+    g_Config.ifName := 'eth0'; //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
     g_Config.fileName := PAnsiChar(g_FileName);
 
 {$IFDEF CONSOLE}
     g_Config.flags := [];
 {$ELSE}
-    g_Config.flags := [dmcNoKeyBoard];  //没有控制台!
+    g_Config.flags := [dmcNoKeyBoard]; //没有控制台!
 {$ENDIF}
-    g_Config.mcastRdv := nil;           //传输地址
-    g_Config.blockSize := 1456;         //这个值在一些情况下（如家用无线），设置大点效果会好些如10K
+    g_Config.mcastRdv := nil; //传输地址
+    g_Config.blockSize := 1456; //这个值在一些情况下（如家用无线），设置大点效果会好些如10K
     g_Config.sliceSize := MIN_SLICE_SIZE;
     g_Config.localPort := 9080;
     g_Config.remotePort := 8090;
@@ -252,7 +263,7 @@ begin
     g_Config.min_receivers_wait := 0;
     g_Config.startTimeout := 0;
 
-    g_Config.retriesUntilDrop := 30;    //sendReqack片重试次数 （原 200）
+    g_Config.retriesUntilDrop := 30; //sendReqack片重试次数 （原 200）
     g_Config.rehelloOffset := 50;
 
     FConsole := TConsole.Create;
@@ -262,7 +273,8 @@ begin
 
     FThread := BeginThread(nil, 0, @TransThread, nil, 0, dwThID);
     btnStop.Enabled := True;
-  end;
+  end else
+    MessageBox(Handle, '文件不存在!', '提示', MB_ICONWARNING);
 end;
 
 procedure TfrmCastFile.SpeedButton1Click(Sender: TObject);
@@ -273,7 +285,7 @@ end;
 
 procedure TfrmCastFile.btnStopClick(Sender: TObject);
 begin
-  if not btnStop.Enabled then Exit;     //已经手动停止中？
+  if not btnStop.Enabled then Exit; //已经手动停止中？
   btnStop.Enabled := False;
 
   if Assigned(g_Nego) then begin

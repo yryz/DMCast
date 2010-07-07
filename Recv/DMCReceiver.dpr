@@ -20,6 +20,9 @@ uses
   IStats_u in '..\Public\IStats_u.pas';
 
 begin
-  RunReceiver(ParamStr(1));
+  if ParamCount < 1 then MessageBox(0,
+      '请在加上参数 "文件保存位置!"'#13#13'DMCReceiver.exe d:\test.rar', '提示', 0)
+  else
+    RunReceiver(ParamStr(1));
 end.
 

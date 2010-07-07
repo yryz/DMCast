@@ -10,10 +10,11 @@ type
   private
     FTransmitting: Boolean;
     FConfig: PNetConfig;
-    FStatPeriod: DWORD;                 //状态显示周期
-    FPeriodStart: DWORD;                //周期开始节拍
-    FLastPosBytes: Int64;               //最后统计进度
-    FTotalBytes: Int64;                 //传输总数
+    FStartTime: DWORD; //传输开始时间
+    FStatPeriod: DWORD; //状态显示周期
+    FPeriodStart: DWORD; //周期开始节拍
+    FLastPosBytes: Int64; //最后统计进度
+    FTotalBytes: Int64; //传输总数
   protected
     procedure DoDisplay();
   public
@@ -23,7 +24,7 @@ type
     procedure BeginTrans();
     procedure EndTrans();
     procedure AddBytes(bytes: Integer);
-    procedure AddRetrans(nrRetrans: Integer);  virtual; abstract;
+    procedure AddRetrans(nrRetrans: Integer); virtual; abstract;
     procedure Msg(msgType: TUMsgType; msg: string);
     function Transmitting(): Boolean;
   end;
@@ -46,7 +47,8 @@ end;
 procedure TReceiverStats.BeginTrans;
 begin
   FTransmitting := True;
-  FPeriodStart := GetTickCount;
+  FStartTime := GetTickCount;
+  FPeriodStart := FStartTime;
 end;
 
 procedure TReceiverStats.EndTrans;
@@ -63,19 +65,28 @@ end;
 
 procedure TReceiverStats.DoDisplay();
 var
-  tickNow, tdiff    : DWORD;
-  blocks            : dword;
-  bw                : double;
-  hOut              : THandle;
-  conBuf            : TConsoleScreenBufferInfo;
+  tickNow, tdiff: DWORD;
+  blocks: dword;
+  bw: double;
+  hOut: THandle;
+  conBuf: TConsoleScreenBufferInfo;
 begin
   tickNow := GetTickCount;
-  tdiff := DiffTickCount(FPeriodStart, tickNow);
 
-  if FTransmitting and (tdiff < FStatPeriod) then Exit;
+  if FTransmitting then
+  begin
+    tdiff := DiffTickCount(FPeriodStart, tickNow);
+    if (tdiff < FStatPeriod) then Exit;
+    //带宽统计
+    bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
+  end else
+  begin
+    tdiff := DiffTickCount(FStartTime, tickNow);
+    if tdiff = 0 then tdiff := 1;
+   //平均带宽统计
+    bw := FTotalBytes / tdiff * 1000; // Byte/s
+  end;
 
-  //带宽统计
-  bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
   //显示状态
 {$IFDEF CONSOLE}
   hOut := GetStdHandle(STD_OUTPUT_HANDLE);

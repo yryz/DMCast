@@ -3,7 +3,7 @@ object frmCastFile: TfrmCastFile
   Top = 222
   Width = 591
   Height = 372
-  Caption = #25991#20214#22810#25773' Beta1'
+  Caption = #25991#20214#22810#25773' Beta2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object frmCastFile: TfrmCastFile
   TextHeight = 13
   object stat1: TStatusBar
     Left = 0
-    Top = 326
+    Top = 319
     Width = 583
     Height = 19
     Panels = <
@@ -28,7 +28,7 @@ object frmCastFile: TfrmCastFile
     Left = 0
     Top = 65
     Width = 196
-    Height = 261
+    Height = 254
     Align = alClient
     Columns = <
       item
@@ -49,7 +49,7 @@ object frmCastFile: TfrmCastFile
     Left = 196
     Top = 65
     Width = 28
-    Height = 261
+    Height = 254
     Align = alRight
     Orientation = pbVertical
     TabOrder = 1
@@ -123,7 +123,7 @@ object frmCastFile: TfrmCastFile
     Left = 224
     Top = 65
     Width = 359
-    Height = 261
+    Height = 254
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
