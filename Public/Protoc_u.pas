@@ -2,7 +2,7 @@ unit Protoc_u;
 
 interface
 uses
-  Windows, WinSock, Config_u;
+  Windows, WinSock;
 
 const
   MAX_FEC_INTERLEAVE = 256;
@@ -14,21 +14,15 @@ const
   BITS_PER_INT      = SizeOf(Integer) * 8;
 
 type
-  { Receiver to sender }
-
   TOpCode = (
+    { Receiver to sender }
     CMD_OK,                             { all is ok, no need to retransmit anything }
     CMD_RETRANSMIT,                     { receiver asks for some data to be retransmitted }
     CMD_GO,                             { receiver tells server to start }
     CMD_CONNECT_REQ,                    { receiver tries to find out server's address }
     CMD_DISCONNECT,                     { receiver wants to disconnect itself }
 
-    CMD_UNUSED, { obsolete version of CMD_HELLO, dating back to the
-    * time when we had little endianness (PC). This
-    * opcode contained a long unnoticed bug with parsing of
-    * blocksize }
-
-{ Sender to receiver }
+    { Sender to receiver }
     CMD_REQACK,                         { server request acknowledgments from receiver }
     CMD_CONNECT_REPLY,                  { receiver tries to find out server's address }
 
@@ -164,7 +158,7 @@ const
    *   - receiver multicast capable
    *   - receiver can receive ASYNC and SN
    }
-   { 一般正常模式 }
+   { 新一代(一般正常模式) }
   CAP_NEW_GEN       = $0001;
 
   { Use multicast instead of Broadcast for data }
@@ -175,19 +169,12 @@ const
   CAP_FEC           = $0004;
 {$ENDIF}
 
-  { Supports big endians (a.k.a. network) }
-  CAP_BIG_ENDIAN    = $0008;
-
-  { Support little endians (a.k.a. PC) ==> obsolete! }
-  CAP_LITTLE_ENDIAN = $0010;
-
   { This transmission is asynchronous (no receiver reply) }
   CAP_ASYNC         = $0020;
 
   { Sender currently supports CAPABILITIES and MULTICAST }
-  SENDER_CAPABILITIES = CAP_NEW_GEN or CAP_BIG_ENDIAN;
-  RECEIVER_CAPABILITIES = CAP_NEW_GEN or CAP_BIG_ENDIAN;
-
+  SENDER_CAPABILITIES = CAP_NEW_GEN;
+  RECEIVER_CAPABILITIES = CAP_NEW_GEN;
 
 implementation
 uses
@@ -197,3 +184,4 @@ initialization
   Assert(SizeOf(TRetransmit) < 1472);
   Assert(MAX_SLICE_SIZE <= DISK_BLOCK_SIZE);
 end.
+

@@ -125,7 +125,7 @@ Locale=2052
 CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
-FileDescription=数据多播协议(可靠)
+FileDescription=文件/数据多播
 FileVersion=1.0.1.0
 InternalName=
 LegalCopyright=HouSoft
@@ -133,7 +133,7 @@ LegalTrademarks=
 OriginalFilename=
 ProductName=DMC
 ProductVersion=1.0.0.0
-Comments=http://www.yryz.net
+Comments=
 [Excluded Packages]
 d:\program files\borland\delphi7\Bin\dclindy70.bpl=Internet Direct (Indy) for D7 Property and Component Editors
 [HistoryLists\hlConditionals]

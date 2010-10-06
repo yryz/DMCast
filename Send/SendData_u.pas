@@ -5,8 +5,9 @@ unit SendData_u;
 interface
 uses
   Windows, Sysutils, Classes, WinSock, Func_u,
-  Config_u, Protoc_u, IStats_u, INegotiate_u,
-  Participants_u, Produconsum_u, Fifo_u, SockLib_u;
+  Config_u, Protoc_u, IStats_u, Negotiate_u,
+  Participants_u, Produconsum_u, Fifo_u, SockLib_u,
+  HouLog_u;
 
 const
   NR_SLICES         = 2;
@@ -59,12 +60,15 @@ type
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     FFecData: PAnsiChar;
 {$ENDIF}
+
+    { 引用 }
     FFifo: TFifo;
     FRc: TRChannel;
-    FConfig: PNetConfig;
+    FDp: TDataPool;
+    FConfig: PSendConfig;
     FUSocket: TUDPSenderSocket;
-    FNegotiate: INegotiate;
-    FStats: ITransStats;
+    FNego: TNegotiate;
+    FStats: ISenderStats;
   private
     function SendRawData(header: PAnsiChar; headerSize: Integer;
       data: PAnsiChar; dataSize: Integer): Integer;
@@ -74,12 +78,10 @@ type
 {$ENDIF}
   public
     constructor Create(Index: Integer;
-      Config: PNetConfig;
       Fifo: TFifo;
       Rc: TRChannel;
-      USocket: TUDPSenderSocket;
-      Negotiate: INegotiate;
-      Stats: ITransStats);
+      Dp: TDataPool;
+      Nego: TNegotiate);
     destructor Destroy; override;
     procedure Init(sliceNo: Integer; base: DWORD_PTR;
 {$IFDEF BB_FEATURE_UDPCAST_FEC}fecData: PAnsiChar; {$ENDIF}bytes: Integer);
@@ -93,7 +95,7 @@ type
     procedure MarkParticipantAnswered(clNo: Integer);
     procedure MarkRetransmit(clNo: Integer; map: PByteArray; rxmit: Integer);
     function IsReady(clNo: Integer): Boolean;
-  published
+  public
     property Index: Integer read FIndex;
     property State: TSliceState read FState write FState;
     property SliceNo: Integer read FSliceNo;
@@ -107,8 +109,12 @@ type
 
   TDataPool = class(TObject)            //数据分片传输池
   private
+    { 用于半双工模式动态调整SliceSize }
     FNrContSlice: Integer;              //连续成功片数，用于判断是否要增加片大小
-    FSliceNo: Integer;
+    FDiscovery: TDiscovery;
+
+    FSliceSize: Integer;
+    FSliceIndex: Integer;
     FSlices: array[0..NR_SLICES - 1] of TSlice;
     FFreeSlicesPC: TProduceConsum;      //可用片
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
@@ -116,22 +122,26 @@ type
     FFecThread: THandle;
     FFecDataPC: TProduceConsum;
 {$ENDIF}
+
+    { 引用 }
     FFifo: TFifo;
-    FConfig: PNetConfig;
-    FStats: ITransStats;
+    FConfig: PSendConfig;
+    FStats: ISenderStats;
+    FNego: TNegotiate;
   public
-    constructor Create(Config: PNetConfig; Stats: ITransStats);
+    constructor Create(Nego: TNegotiate);
     destructor Destroy; override;
-    procedure Open(Fifo: TFifo; Rc: TRChannel;
-      USocket: TUDPSenderSocket; Negotiate: INegotiate); //在运行前，一定要执行！
+    procedure InitSlice(Fifo: TFifo; Rc: TRChannel); //初始化！
     procedure Close;
 
     function MakeSlice(): TSlice;       //准备数据片
     function AckSlice(Slice: TSlice): Integer; //确认片，成功返回>=0
     function FreeSlice(Slice: TSlice): Integer;
     function FindSlice(Slice1, Slice2: TSlice; sliceNo: Integer): TSlice;
-  published
+  public
     property NrContSlice: Integer read FNrContSlice write FNrContSlice;
+    property Discovery: TDiscovery read FDiscovery write FDiscovery;
+    property SliceSize: Integer read FSliceSize write FSliceSize;
   end;
 
   TCtrlMsgQueue = packed record
@@ -147,40 +157,40 @@ type
     FFreeSpacePC: TProduceConsum;       { free space }
     FMsgQueue: array[0..RC_MSG_QUEUE_SIZE - 1] of TCtrlMsgQueue; //消息队列
 
+    { 引用 }
     FDp: TDataPool;
-    FConfig: PNetConfig;
+    FNego: TNegotiate;
+    FConfig: PSendConfig;
     FParts: TParticipants;
-    FStats: ITransStats;
   public
-    constructor Create(config: PNetConfig; USocket: TUDPSenderSocket;
-      Dp: TDataPool; Parts: TParticipants; Stats: ITransStats);
+    constructor Create(Nego: TNegotiate; Dp: TDataPool);
     destructor Destroy; override;
     procedure Terminate; overload;
     procedure HandleNextMessage(xmitSlice, rexmitSlice: TSlice); //处理反馈消息队列中的消息
   protected
     procedure Execute; override;        //循环接收客户端反馈消息（但不处理）
-  published
+  public
     property IncomingPC: TProduceConsum read FIncomingPC;
   end;
 
   TSender = class                       //(TThread)   //数据发送、处理、协调
   private
+    FTerminated: Boolean;               //终止发送
+
+    { 引用 }
     FDp: TDataPool;
     FRc: TRChannel;
-    FConfig: PNetConfig;
+    FNego: TNegotiate;
+    FConfig: PSendConfig;
     FParts: TParticipants;
-    FStats: ITransStats;
-    FTerminated: Boolean;               //终止发送
   public
-    constructor Create(Config: PNetConfig;
+    constructor Create(Nego: TNegotiate;
       Dp: TDataPool;
-      Rc: TRChannel;
-      Parts: TParticipants;
-      Stats: ITransStats);
+      Rc: TRChannel);
     destructor Destroy; override;
 
     procedure Execute;                  //override;    //循环发送和处理客户端反馈消息
-  published
+  public
     property Terminated: Boolean read FTerminated write FTerminated;
   end;
 
@@ -192,12 +202,14 @@ constructor TSlice.Create;
 begin
   FIndex := Index;
   FState := SLICE_FREE;
-  FConfig := Config;
+
   FFifo := Fifo;
   FRc := Rc;
-  FUSocket := USocket;
-  FNegotiate := Negotiate;
-  FStats := Stats;
+  FDp := Dp;
+  FNego := Nego;
+  FUSocket := Nego.USocket;
+  FConfig := Nego.Config;
+  FStats := Nego.Stats;
 end;
 
 destructor TSlice.Destroy;
@@ -252,17 +264,18 @@ begin
     Writeln(Format('nrBlocks=%d lastGoodBlocks=%d', [nrBlocks, FLastGoodBlocks]));
 {$ENDIF}
     //如果当前块数大于上次成功的块数，减小片大小
-    if (FLastGoodBlocks <> 0) and (FLastGoodBlocks < nrBlocks) then begin
-      FConfig^.discovery := DSC_REDUCING;
-      if (FLastGoodBlocks < FConfig^.sliceSize div REDOUBLING_SETP) then
-        FConfig^.sliceSize := FConfig^.sliceSize div REDOUBLING_SETP
+    if (FLastGoodBlocks <> 0) and (FLastGoodBlocks < nrBlocks) then
+    begin
+      FDp.Discovery := DSC_REDUCING;
+      if (FLastGoodBlocks < FDp.SliceSize div REDOUBLING_SETP) then
+        FDp.SliceSize := FDp.SliceSize div REDOUBLING_SETP
       else
-        FConfig^.sliceSize := FLastGoodBlocks;
+        FDp.SliceSize := FLastGoodBlocks;
 
-      if (FConfig^.sliceSize < MIN_SLICE_SIZE) then
-        FConfig^.sliceSize := MIN_SLICE_SIZE;
+      if (FDp.SliceSize < MIN_SLICE_SIZE) then
+        FDp.SliceSize := MIN_SLICE_SIZE;
 {$IFDEF DMC_DEBUG_ON}
-      FStats.Msg(umtDebug, Format('Slice size^.%d', [FConfig^.sliceSize]));
+      OutLog2(llDebug, Format('Slice size^.%d', [FDp.SliceSize]));
 {$ENDIF}
     end;
   end;
@@ -307,13 +320,14 @@ begin
   Result := 0;
   nrRetrans := 0;
 
-  if isRetrans then begin
+  if isRetrans then
+  begin
     FNextBlock := 0;
     if (FState <> SLICE_XMITTED) then
       Exit;
-  end else
-    if (FState <> SLICE_NEW) then
-      Exit;
+  end
+  else if (FState <> SLICE_NEW) then
+    Exit;
 
   nrBlocks := GetBlocks();
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
@@ -337,7 +351,8 @@ begin
     rehello := nrBlocks - FConfig^.rehelloOffset;
     if rehello < 0 then
       rehello := 0
-  end else
+  end
+  else
     rehello := -1;
 
   { transmit the data }
@@ -347,7 +362,8 @@ begin
   + fecBlocks
 {$ENDIF} - 1 do
   begin
-    if isRetrans then begin
+    if isRetrans then
+    begin
       if not BIT_ISSET(i, @FRxmitMap) or
         BIT_ISSET(i, @FXmittedMap) then
       begin                             //如果不在重传列表或已经完成那么跳过
@@ -364,7 +380,7 @@ begin
     end;
 
     if (i = rehello) then
-      FNegotiate.SendHello(True);       //流模式
+      FNego.SendHello(True);            //流模式
 
     if i < nrBlocks then
       TransmitDataBlock(i)
@@ -372,23 +388,25 @@ begin
     else
       TransmitFecBlock(i - nrBlocks)
 {$ENDIF};
-    if not LongBool(isRetrans) and (FRc.FIncomingPC.GetProducedAmount > 0) then
+    if not isRetrans and (FRc.FIncomingPC.GetProducedAmount > 0) then
       Break;                            //传输包时若有反馈消息(一般为需要重传)，先中止传输，处理
   end;                                  //end while
 
   if nrRetrans > 0 then
     FStats.AddRetrans(nrRetrans);       //更新状态
 
-
   if i <> nrBlocks
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   + fecBlocks
-{$ENDIF} then begin
+{$ENDIF} then
+  begin
     FNextBlock := i                     //数据片没有传输完，记住下次要传输的位置
-  end else
+  end
+  else
   begin
     FNeedRxmit := False;
-    if not LongBool(isRetrans) then FState := SLICE_XMITTED;
+    if not LongBool(isRetrans) then
+      FState := SLICE_XMITTED;
 
 {$IFDEF DEBUG}
     writeln(Format('Done: at block %d %d %d',
@@ -407,7 +425,6 @@ end;
 function TSlice.SendRawData(header: PAnsiChar; headerSize: Integer;
   data: PAnsiChar; dataSize: Integer): Integer;
 var
-  iov               : array[0..1] of TIOVec;
   msg               : TNetMsg;
 begin
   msg.head.base := header;
@@ -418,10 +435,11 @@ begin
   ////rgWaitAll(config, sock, FUSocket.CastAddr.sin_addr.s_addr, dataSize + headerSize);
   Result := FUSocket.SendDataMsg(msg);
 {$IFDEF DMC_ERROR_ON}
-  if Result < 0 then begin
-    raise Exception.CreateFmt('(%d) Could not broadcast data packet to %s:%d',
+  if Result < 0 then
+  begin
+    OutLog2(llError, Format('(%d) Could not broadcast data packet to %s:%d',
       [GetLastError, inet_ntoa(FUSocket.DataAddr.sin_addr),
-      ntohs(FUSocket.DataAddr.sin_port)]);
+      ntohs(FUSocket.DataAddr.sin_port)]));
   end;
 {$ENDIF}
 end;
@@ -447,15 +465,15 @@ begin
   if size > FConfig^.blockSize then
     size := FConfig^.blockSize;
 
-  Result := SendRawData(@msg, SizeOf(msg), Pointer(FFifo.DataBuffer
-    + (FBase + i * FConfig^.blockSize) mod FFifo.DataBufSize), size);
+  Result := SendRawData(@msg, SizeOf(msg),
+    FFifo.GetDataBuffer(FBase + i * FConfig^.blockSize), size);
 end;
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
 
 function TSlice.TransmitFecBlock(int i): Integer;
 var
-  config            : PNetConfig;
+  config            : PSendConfig;
   msg               : fecBlock;
 begin
   Result := 0;
@@ -481,12 +499,15 @@ end;
 
 procedure TSlice.MarkOk(clNo: Integer);
 begin
-  if (BIT_ISSET(clNo, @FReqackBm.readySet)) then begin
+  if (BIT_ISSET(clNo, @FReqackBm.readySet)) then
+  begin
     { client is already marked ready }
 {$IFDEF DEBUG}
     writeln(Format('client %d is already ready', [clNo]));
 {$ENDIF}
-  end else begin
+  end
+  else
+  begin
     SET_BIT(clNo, @FReqackBm.readySet);
     Inc(FNrReady);
 {$IFDEF DEBUG}
@@ -499,12 +520,14 @@ end;
 
 procedure TSlice.MarkDisconnect(clNo: Integer);
 begin
-  if (BIT_ISSET(clNo, @FReqackBm.readySet)) then begin
+  if (BIT_ISSET(clNo, @FReqackBm.readySet)) then
+  begin
     //avoid counting client both as left and ready
     CLR_BIT(clNo, @FReqackBm.readySet);
     Dec(FNrReady);
   end;
-  if (BIT_ISSET(clNo, @FAnsweredMap)) then begin
+  if (BIT_ISSET(clNo, @FAnsweredMap)) then
+  begin
     Dec(FNrAnswered);
     CLR_BIT(clNo, @FAnsweredMap);
   end;
@@ -538,6 +561,7 @@ begin
   writeln(Format('Received retransmit request for slice %d from client %d',
     [Slice^.sliceNo, clNo]);
 {$ENDIF}
+    //or 操作，填充需重传BlocksMap
     for i := 0 to SizeOf(FRxmitMap) - 1 do
       FRxmitMap[i] := FRxmitMap[i] or not map[i];
 
@@ -554,7 +578,6 @@ end;
 //   { TDataPool }
 //------------------------------------------------------------------------------
 
-
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
 
 procedure fec_encode_all_stripes(sendst: PSenderState;
@@ -562,7 +585,7 @@ procedure fec_encode_all_stripes(sendst: PSenderState;
 var
   i, j              : Integer;
   stripe            : Integer;
-  config            : PNetConfig;
+  config            : PSendConfig;
   fifo              : PFifo;
   bytes, stripes, redundancy, nrBlocks, leftOver: Integer;
   fec_data          : PAnsiChar;
@@ -580,18 +603,21 @@ begin
   fec_data := slice^.fec_data;
 
   SetLength(fec_blocks, redundancy);
-  if (leftOver) then begin
+  if (leftOver) then
+  begin
     lastBlock := fifo^.dataBuffer + (slice^.base + (nrBlocks - 1)
       * FConfig^.blockSize) mod fifo^.dataBufSize;
     FillChar(lastBlock + leftOver, FConfig^.blockSize - leftOver, 0);
   end;
 
-  for stripe := 0 to stripes - 1 do begin
+  for stripe := 0 to stripes - 1 do
+  begin
     for i = : 0 to redundancy - 1 do
       fec_blocks[i] := fec_data + FConfig^.blockSize * (stripe + i * stripes);
     j := 0;
     i := stripe;
-    while i < nrBlocks do begin
+    while i < nrBlocks do
+    begin
       data_blocks[j] = ADR(i, FConfig^.blockSize);
       Inc(i, stripes);
       Inc(j);
@@ -607,7 +633,8 @@ var
 begin
   sliceNo := 0;
 
-  while True do begin
+  while True do
+  begin
     { consume free slice }
     slice := makeSlice(sendst, sliceNo);
     Inc(sliceNo);
@@ -621,8 +648,9 @@ end;
 
 constructor TDataPool.Create;
 begin
-  FConfig := Config;
-  FStats := Stats;
+  FNego := Nego;
+  FConfig := Nego.Config;
+  FStats := Nego.Stats;
 end;
 
 destructor TDataPool.Destroy;
@@ -632,14 +660,14 @@ begin
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   FFecThread.Destroy;
 {$ENDIF}
-  if Assigned(FFreeSlicesPC) then FreeAndNil(FFreeSlicesPC);
+  if Assigned(FFreeSlicesPC) then
+    FreeAndNil(FFreeSlicesPC);
   for i := 0 to NR_SLICES - 1 do
     FreeAndNil(FSlices[i]);
   inherited;
 end;
 
-procedure TDataPool.Open(Fifo: TFifo; Rc: TRChannel;
-  USocket: TUDPSenderSocket; Negotiate: INegotiate);
+procedure TDataPool.InitSlice;
 var
   i                 : Integer;
 begin
@@ -654,29 +682,31 @@ begin
 
   FFreeSlicesPC := TProduceConsum.Create(NR_SLICES, 'free slices');
   FFreeSlicesPC.Produce(NR_SLICES);
-  for i := 0 to NR_SLICES - 1 do
-    FSlices[i] := TSlice.Create(i, FConfig, Fifo, Rc, USocket, Negotiate, FStats);
+  for i := 0 to NR_SLICES - 1 do        //准备片
+    FSlices[i] := TSlice.Create(i, Fifo, Rc, Self, FNego);
 
-  if (FConfig^.default_slice_size = 0) then begin
+  if (FConfig^.default_slice_size = 0) then
+  begin                                 //根据情况设置合适的片大小
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     if LongBool(FConfig^.flags and FLAG_FEC) then
-      FConfig^.sliceSize := FConfig^.fec_stripesize * FConfig^.fec_stripes
+      FSliceSize := FConfig^.fec_stripesize * FConfig^.fec_stripes
     else
-{$ENDIF}
-      if dmcAsyncMode in FConfig^.flags then
-        FConfig^.sliceSize := MAX_SLICE_SIZE
+{$ENDIF}if dmcAsyncMode in FConfig^.flags then
+        FSliceSize := MAX_SLICE_SIZE
       else if dmcFullDuplex in FConfig^.flags then
-        FConfig^.sliceSize := 112
+        FSliceSize := 112
       else
-        FConfig^.sliceSize := 130;
+        FSliceSize := 130;
 
-    FConfig^.discovery := DSC_DOUBLING;
-  end else begin
-    FConfig^.sliceSize := FConfig^.default_slice_size;
+    FDiscovery := DSC_DOUBLING;
+  end
+  else
+  begin
+    FSliceSize := FConfig^.default_slice_size;
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     if LongBool(FConfig^.flags and FLAG_FEC) and
-      (FConfig^.sliceSize > 128 * FConfig^.fec_stripes) then
-      FConfig^.sliceSize := 128 * FConfig^.fec_stripes;
+      (FDp.SliceSize > 128 * FConfig^.fec_stripes) then
+      FDp.SliceSize := 128 * FConfig^.fec_stripes;
 {$ENDIF}
   end;
 
@@ -686,13 +716,14 @@ begin
     FConfig^.max_slice_size = FConfig^.fec_stripes * 128;
 {$ENDIF}
 
-  if (FConfig^.sliceSize > FConfig^.max_slice_size) then
-    FConfig^.sliceSize := FConfig^.max_slice_size;
+  if (FSliceSize > FConfig^.max_slice_size) then
+    FSliceSize := FConfig^.max_slice_size;
 
-  assert(FConfig^.sliceSize <= MAX_SLICE_SIZE);
+  assert(FSliceSize <= MAX_SLICE_SIZE);
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
-  if LongBool(FConfig^.flags and FLAG_FEC) then begin
+  if LongBool(FConfig^.flags and FLAG_FEC) then
+  begin
     { Free memory queue is initially full }
     fec_init();
     FFecDataPC := TProduceConsum.Create(NR_SLICES, 'fec data');
@@ -704,10 +735,12 @@ end;
 
 procedure TDataPool.Close;
 begin
-  if Assigned(FFreeSlicesPC) then FFreeSlicesPC.MarkEnd;
+  if Assigned(FFreeSlicesPC) then
+    FFreeSlicesPC.MarkEnd;
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
-  if LongBool(FConfig^.flags and FLAG_FEC) then begin
+  if LongBool(FConfig^.flags and FLAG_FEC) then
+  begin
     pthread_cancel(FFec_thread);
     pthread_join(FFec_thread, nil);
     pc_destoryProduconsum(FFec_data_pc);
@@ -721,12 +754,14 @@ var
   I, bytes          : Integer;
 begin
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
-  if LongBool(FConfig^.flags and FLAG_FEC) then begin
+  if LongBool(FConfig^.flags and FLAG_FEC) then
+  begin
     FFecDataPC.Consume(1);
     i := FFecDataPC.GetConsumerPosition();
     Result := FSlices[i];
     FFecDataPC.Consumed(1);
-  end else
+  end
+  else
 {$ENDIF}
   begin
     FFreeSlicesPC.Consume(1);
@@ -739,13 +774,13 @@ begin
 
   bytes := FFifo.DataPC.Consume(MIN_SLICE_SIZE * FConfig^.blockSize);
   { fixme: use current slice size here }
-  if bytes > FConfig^.blockSize * FConfig^.sliceSize then
-    bytes := FConfig^.blockSize * FConfig^.sliceSize;
+  if bytes > FConfig^.blockSize * FSliceSize then
+    bytes := FConfig^.blockSize * FSliceSize;
 
   if bytes > FConfig^.blockSize then
     Dec(bytes, bytes mod FConfig^.blockSize);
 
-  Result.Init(FSliceNo, FFifo.DataPC.GetConsumerPosition(),
+  Result.Init(FSliceIndex, FFifo.DataPC.GetConsumerPosition(),
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     sendst^.fec_data + (i * FConfig^.fec_stripes *
     FConfig^.fec_redundancy *
@@ -753,7 +788,7 @@ begin
 {$ENDIF}bytes);
 
   FFifo.DataPC.Consumed(bytes);
-  Inc(FSliceNo);
+  Inc(FSliceIndex);
 
 {$IFDEF 0}
   writeln(Format('Made slice %p %d', [@Result, sliceNo]));
@@ -762,24 +797,32 @@ end;
 
 function TDataPool.AckSlice(Slice: TSlice): Integer;
 begin
-  if not (dmcFullDuplex in FConfig^.flags) then //全又工，不需要增加(可不停的发)
-    if (FConfig^.sliceSize < FConfig^.max_slice_size) then //可增加
-      if (FConfig^.discovery = DSC_DOUBLING) then begin //增加片大小
-        Inc(FConfig^.sliceSize, FConfig^.sliceSize div DOUBLING_SETP);
-        if (FConfig^.sliceSize >= FConfig^.max_slice_size) then begin
-          FConfig^.sliceSize := FConfig^.max_slice_size;
-          FConfig^.discovery := DSC_REDUCING;
-        end;
-{$IFDEF DMC_DEBUG_ON}
-        FStats.Msg(umtDebug, Format('Doubling slice size to %d', [FConfig^.sliceSize]));
-{$ENDIF}
-      end else begin                    //成功片计数
-        if FNrContSlice >= MIN_CONT_SLICE then begin
-          FConfig^.discovery := DSC_DOUBLING;
-          FNrContSlice := 0;
-        end else
-          Inc(FNrContSlice);
+  if not (dmcFullDuplex in FConfig^.flags) //非全双工模式，有必要动态调整片大小
+  and (FSliceSize < FConfig^.max_slice_size) then //可增加
+    if (FDiscovery = DSC_DOUBLING) then
+    begin                               //增加片大小
+      Inc(FSliceSize, FSliceSize div DOUBLING_SETP);
+
+      if (FSliceSize >= FConfig^.max_slice_size) then
+      begin
+        FSliceSize := FConfig^.max_slice_size;
+        FDiscovery := DSC_REDUCING;
       end;
+
+{$IFDEF DMC_DEBUG_ON}
+      OutLog2(llDebug, Format('Doubling slice size to %d', [FSliceSize]));
+{$ENDIF}
+    end
+    else
+    begin                               //成功片计数
+      if FNrContSlice >= MIN_CONT_SLICE then
+      begin
+        FDiscovery := DSC_DOUBLING;
+        FNrContSlice := 0;
+      end
+      else
+        Inc(FNrContSlice);
+    end;
 
   Result := Slice.Bytes;
   FFifo.FreeMemPC.Produce(Result);
@@ -794,7 +837,8 @@ begin
     Result := Slice1
   else if (Slice2 <> nil) and (Slice2.SliceNo = sliceNo) then
     Result := Slice2
-  else Result := nil;
+  else
+    Result := nil;
 end;
 
 function TDataPool.FreeSlice(Slice: TSlice): Integer;
@@ -812,7 +856,8 @@ begin
     pos := FFreeSlicesPC.GetProducerPosition();
     if FSlices[pos].State = SLICE_PRE_FREE then //防止Free正在使用的Slice
       FSlices[pos].State := SLICE_FREE
-    else Break;
+    else
+      Break;
     FFreeSlicesPC.Produce(1);
   end;
 end;
@@ -824,10 +869,10 @@ end;
 constructor TRChannel.Create;
 begin
   FDp := Dp;
-  FConfig := config;
-  FUSocket := USocket;
-  FParts := Parts;
-  FStats := Stats;
+  FNego := Nego;
+  FConfig := Nego.Config;
+  FUSocket := Nego.USocket;
+  FParts := Nego.Parts;
 
   FFreeSpacePC := TProduceConsum.Create(RC_MSG_QUEUE_SIZE, 'msg:free-queue');
   FFreeSpacePC.Produce(RC_MSG_QUEUE_SIZE);
@@ -846,8 +891,10 @@ end;
 procedure TRChannel.Terminate;
 begin
   inherited;
-  if Assigned(FFreeSpacePC) then FFreeSpacePC.MarkEnd;
-  if Assigned(FIncomingPC) then FIncomingPC.MarkEnd;
+  if Assigned(FFreeSpacePC) then
+    FFreeSpacePC.MarkEnd;
+  if Assigned(FIncomingPC) then
+    FIncomingPC.MarkEnd;
   WaitFor;
 end;
 
@@ -870,13 +917,16 @@ begin
     CMD_OK:
       begin
         Slice := FDp.FindSlice(xmitSlice, rexmitSlice, ntohl(msg^.ok.sliceNo));
-        if Slice <> nil then Slice.MarkOk(clNo);
+        if Slice <> nil then
+          Slice.MarkOk(clNo);
       end;
 
     CMD_DISCONNECT:
       begin
-        if Assigned(xmitSlice) then xmitSlice.MarkDisconnect(clNo);
-        if Assigned(rexmitSlice) then rexmitSlice.MarkDisconnect(clNo);
+        if Assigned(xmitSlice) then
+          xmitSlice.MarkDisconnect(clNo);
+        if Assigned(rexmitSlice) then
+          rexmitSlice.MarkDisconnect(clNo);
         FParts.Remove(clNo);
       end;
 
@@ -886,14 +936,16 @@ begin
         WriteLn(Format('Received retransmittal request for %d from %d: ',
           [ntohl(msg^.retransmit.sliceNo), clNo]));
 {$ENDIF}
-        Slice := FDp.FindSlice(xmitSlice, rexmitSlice, ntohl(msg^.ok.sliceNo));
-        if Slice <> nil then Slice.MarkRetransmit(clNo,
+        Slice := FDp.FindSlice(xmitSlice, rexmitSlice, ntohl(msg^.retransmit.sliceNo));
+        if Slice <> nil then
+          Slice.MarkRetransmit(clNo,
             @msg^.retransmit.map,
             msg^.retransmit.rxmit);
       end;
-  else begin
+  else
+    begin
 {$IFDEF DMC_WARN_ON}
-      FStats.Msg(umtWarn, Format('Bad command %-.4x', [ntohs(msg^.opCode)]));
+      OutLog2(llWarn, Format('Bad command %-.4x', [ntohs(msg^.opCode)]));
 {$ENDIF}
     end;
   end;
@@ -911,11 +963,14 @@ begin
     pos := FFreeSpacePC.GetConsumerPosition();
     FFreeSpacePC.ConsumeAny();
 
-    if Terminated then Break;
+    if Terminated then
+      Break;
 
     ReturnValue := FUSocket.RecvCtrlMsg(FMsgQueue[pos].msg,
       SizeOf(FMsgQueue[pos].msg), addrFrom);
-    if ReturnValue > 0 then begin
+
+    if ReturnValue > 0 then
+    begin
       clNo := FParts.Lookup(@addrFrom);
       if (clNo < 0) then                { packet from unknown provenance }
         Continue;
@@ -933,16 +988,17 @@ end;
 
 constructor TSender.Create;
 begin
-  FConfig := config;
-  FDp := dp;
-  FRc := rc;
-  FParts := Parts;
-  FStats := Stats;
+  FNego := Nego;
+  FConfig := Nego.Config;
+  FDp := Dp;
+  FRc := Rc;
+  FParts := Nego.Parts;
   //inherited Create(True);
 end;
 
 destructor TSender.Destroy;
 begin
+  FTerminated := True;
   inherited;
 end;
 
@@ -964,16 +1020,19 @@ begin
   rexmitSlice := nil;                   // Slice等待确认或重传
 
   { transmit the data }
-  FStats.BeginTrans;
+  FNego.TransState := tsTransing;
   while not FTerminated do
   begin
     if dmcAsyncMode in FConfig^.flags then //ASYNC
     begin
-      if (xmitSlice <> nil) then begin  // 直接确认，释放
+      if (xmitSlice <> nil) then
+      begin                             // 直接确认，释放
         FDp.AckSlice(xmitSlice);
         xmitSlice := nil;
       end;
-    end else begin
+    end
+    else
+    begin
       if FParts.Count < 1 then          // 没有成员
         Break;
 
@@ -998,7 +1057,8 @@ begin
         Continue;
       end;
 
-      if (rexmitSlice <> nil) then begin
+      if (rexmitSlice <> nil) then
+      begin
         if (rexmitSlice.NeedRxmit) then
         begin                           // 重传
           FDp.NrContSlice := 0;         // 连续片数清0
@@ -1046,14 +1106,15 @@ begin
       waitTime := waitAvg div 1000;
 
     //Writeln(#13, waitTime);
-    if FRc.incomingPC.ConsumeAnyWithTimeout(waitTime) > 0 then
+    if FRc.IncomingPC.ConsumeAnyWithTimeout(waitTime) > 0 then
     begin                               // 有反馈消息
 {$IFDEF DEBUG}
       Writeln('Have data');
 {$ENDIF}
       // 根据性能更新等待时间
       tickDiff := DiffTickCount(tickStart, GetTickCountUSec());
-      if (nrWaited > 0) then Inc(tickDiff, waitAvg);
+      if (nrWaited > 0) then
+        Inc(tickDiff, waitAvg);
 
       Inc(waitAvg, 9);
       waitAvg := Trunc(0.9 * waitAvg + 0.1 * tickDiff);
@@ -1061,10 +1122,13 @@ begin
       nrWaited := 0;
       Continue;
     end
-    else begin                          // 检测是否超时，否则再请求确认
-      if (rexmitSlice <> nil) then begin
+    else
+    begin                               // 检测是否超时，否则再请求确认
+      if (rexmitSlice <> nil) then
+      begin
 {$IFDEF DEBUG}
-        if (nrWaited > 5) then begin
+        if (nrWaited > 5) then
+        begin
           Write('Timeout notAnswered map = ');
           printNotSet(rc^.participantsDb,
             @rexmitSlice^.answeredSet);
@@ -1082,25 +1146,31 @@ begin
           for i := 0 to MAX_CLIENTS - 1 do
           begin
             if (not rexmitSlice.IsReady(i)) then
-              if FParts.Remove(i) then begin //移除接收器
+              if FParts.Remove(i) then
+              begin                     //移除接收器
 {$IFDEF DMC_MSG_ON}
-                FStats.Msg(umtMsg, 'Dropping client #' + IntToStr(i) + ' because of timeout');
+                OutLog2(llMsg, 'Dropping client #' + IntToStr(i) + ' because of timeout');
 {$ENDIF}
               end;
           end;
-        end else
+        end
+        else
           rexmitSlice.Reqack();         // 重发 Reqack
-      end else
+      end
+      else
       begin                             //rexmitSlice = nil ？奇怪！^_^!
 {$IFDEF DMC_FATAL_ON}
-        FStats.Msg(umtFatal, 'Weird. Timeout and no rxmit slice');
+        OutLog2(llFatal, 'Weird. Timeout and no rxmit slice');
 {$ENDIF}
         Break;
       end;
     end;                                // end wait
   end;                                  // end while
 
-  FStats.EndTrans;                      // 结束传输
+{$IFDEF DMC_MSG_ON}
+  OutLog2(llMsg, 'Transfer complete.');
+{$ENDIF}
+  FNego.TransState := tsComplete;       // 结束传输
 end;
 
 end.

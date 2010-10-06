@@ -94,13 +94,13 @@ OutputDir=..\bin
 UnitOutputDir=z:\
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=..\Include;..\Public;..\Send
+SearchPath=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
-Conditionals=EN_LOG
+Conditionals=
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
-RunParams=
+RunParams=z:\test.rar
 HostApplication=
 Launcher=
 UseLauncher=0
@@ -110,11 +110,11 @@ ActiveLang=
 ProjectLang=
 RootDir=d:\Program Files\Borland\Delphi7\Bin\
 [Version Info]
-IncludeVerInfo=1
+IncludeVerInfo=0
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
-Release=1
+Release=0
 Build=0
 Debug=0
 PreRelease=0
@@ -124,30 +124,29 @@ DLL=0
 Locale=2052
 CodePage=936
 [Version Info Keys]
-CompanyName=HouSoft
-FileDescription=数据多播协议(可靠)
-FileVersion=1.0.1.0
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
 InternalName=
-LegalCopyright=HouSoft
+LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
-ProductName=DMC
+ProductName=
 ProductVersion=1.0.0.0
-Comments=http://www.yryz.net
+Comments=
 [Excluded Packages]
 d:\program files\borland\delphi7\Bin\dclindy70.bpl=Internet Direct (Indy) for D7 Property and Component Editors
 [HistoryLists\hlConditionals]
-Count=2
-Item0=EN_LOG
-Item1=CONSOLE
+Count=1
+Item0=BB_FEATURE_UDPCAST_FEC
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=5
-Item0=..\Include;..\Public;..\Send
-Item1=..\Include
-Item2=E:\HouProject\HouNetMgr\Include
+Item0=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
+Item1=..\Include;..\Public;..\Recv
+Item2=..\Include\win32api
 Item3=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
 Item4=E:\程序\Delphi\HOU网络管理\Include\win32api
 [HistoryLists\hlUnitOutputDirectory]

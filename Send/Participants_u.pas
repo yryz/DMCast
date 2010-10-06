@@ -4,7 +4,7 @@ unit Participants_u;
 
 interface
 uses
-  Windows, Sysutils, WinSock, Config_u, Func_u, INegotiate_u;
+  Windows, Sysutils, WinSock, Config_u, Func_u, IStats_u;
 
 type
   PClientDesc = ^TClientDesc;
@@ -22,7 +22,7 @@ type
   private
     FCount: Integer;
     FClientTable: TClientTable;
-    FOnPartsChange: TOnPartsChange;
+    FPartsStats: IPartsStats;
   public
     constructor Create();
     destructor Destroy; override;
@@ -40,7 +40,7 @@ type
     procedure PrintSet(d: PByteArray);
   published
     property Count: Integer read FCount;
-    property OnPartsChange: TOnPartsChange read FOnPartsChange write FOnPartsChange;
+    property PartsStats: IPartsStats read FPartsStats write FPartsStats;
   end;
 
 implementation
@@ -63,14 +63,15 @@ var
 begin
   i := Lookup(addr);
   Result := i;
-  if i >= 0 then Exit;
+  if i >= 0 then
+    Exit;
 
   for i := 0 to MAX_CLIENTS - 1 do
   begin
     if not FClientTable[i].used then
     begin
-      if Assigned(FOnPartsChange) then
-        if not FOnPartsChange(True, i, addr) then
+      if Assigned(FPartsStats) then
+        if not FPartsStats.Add(i, addr) then
           Exit;
 
       FClientTable[i].addr := addr^;
@@ -85,7 +86,8 @@ begin
 
       Result := i;
       Exit;
-    end else if (pointopoint) then
+    end
+    else if (pointopoint) then
       Break;
   end;
 end;
@@ -124,7 +126,8 @@ begin
   for i := 0 to MAX_CLIENTS - 1 do
   begin
     if FClientTable[i].used and
-      (FClientTable[i].addr.sin_addr.S_addr = addr.sin_addr.S_addr) then begin
+      (FClientTable[i].addr.sin_addr.S_addr = addr.sin_addr.S_addr) then
+    begin
       Result := i;
       Break;
     end;
@@ -184,9 +187,10 @@ end;
 function TParticipants.Remove(i: Integer): Boolean;
 begin
   Result := IsValid(i);
-  if Result then begin
-    if Assigned(FOnPartsChange) then
-      Result := FOnPartsChange(False, i, @FClientTable[i].addr);
+  if Result then
+  begin
+    if Assigned(FPartsStats) then
+      Result := FPartsStats.Remove(i, @FClientTable[i].addr);
 
     if Result then
     begin

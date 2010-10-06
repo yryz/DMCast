@@ -1,22 +1,22 @@
 object frmCastFile: TfrmCastFile
-  Left = 226
-  Top = 209
+  Left = 392
+  Top = 168
   Width = 591
   Height = 372
-  Caption = #25991#20214#22810#25773' Beta3'
+  Caption = #25991#20214#22810#25773' v1.0a'
   Color = clBtnFace
-  Font.Charset = DEFAULT_CHARSET
+  Font.Charset = ANSI_CHARSET
   Font.Color = clWindowText
-  Font.Height = -11
-  Font.Name = 'MS Sans Serif'
+  Font.Height = -12
+  Font.Name = #23435#20307
   Font.Style = []
   OldCreateOrder = False
   OnCreate = FormCreate
   PixelsPerInch = 96
-  TextHeight = 13
+  TextHeight = 12
   object stat1: TStatusBar
     Left = 0
-    Top = 326
+    Top = 319
     Width = 583
     Height = 19
     Panels = <
@@ -28,7 +28,7 @@ object frmCastFile: TfrmCastFile
     Left = 0
     Top = 65
     Width = 196
-    Height = 261
+    Height = 254
     Align = alClient
     Columns = <
       item
@@ -49,7 +49,7 @@ object frmCastFile: TfrmCastFile
     Left = 196
     Top = 65
     Width = 28
-    Height = 261
+    Height = 254
     Align = alRight
     Orientation = pbVertical
     ParentShowHint = False
@@ -86,7 +86,7 @@ object frmCastFile: TfrmCastFile
       Left = 48
       Top = 16
       Width = 180
-      Height = 21
+      Height = 20
       ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
       TabOrder = 0
       Text = 'F:\sys\W98plus2.rar'
@@ -125,7 +125,7 @@ object frmCastFile: TfrmCastFile
     Left = 224
     Top = 65
     Width = 359
-    Height = 261
+    Height = 254
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
@@ -144,13 +144,7 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #24050#20256#36755' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
+        Caption = #24050#20256#36755':'
         Transparent = True
       end
       object lbl2: TLabel
@@ -160,13 +154,7 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #21457#36895#24230' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
+        Caption = #21457#36895#24230':'
         Transparent = True
       end
       object lbl3: TLabel
@@ -176,13 +164,7 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #37325#20256#22359' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
+        Caption = #37325#20256#22359':'
         Transparent = True
       end
       object lbl4: TLabel
@@ -192,14 +174,9 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #29255#22823#23567' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
+        Caption = #29255#22823#23567':'
         Transparent = True
+        Visible = False
       end
       object lblSliceSize: TLabel
         Left = 67
@@ -215,6 +192,7 @@ object frmCastFile: TfrmCastFile
         Font.Style = []
         ParentFont = False
         Transparent = True
+        Visible = False
       end
       object lblRexmit: TLabel
         Left = 67
@@ -270,56 +248,28 @@ object frmCastFile: TfrmCastFile
       Caption = #35774#32622
       TabOrder = 1
       object lbl5: TLabel
-        Left = 10
-        Top = 56
-        Width = 49
+        Left = 3
+        Top = 22
+        Width = 78
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #29255#22823#23567' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
-        Transparent = True
-      end
-      object lbl6: TLabel
-        Left = 10
-        Top = 84
-        Width = 49
-        Height = 13
-        Alignment = taRightJustify
-        AutoSize = False
-        Caption = #33258#24320#22987' :'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
+        Caption = #21021#22987#29255#22823#23567':'
         Transparent = True
       end
       object chkAutoSliceSize: TCheckBox
         Left = 16
-        Top = 24
+        Top = 48
         Width = 121
         Height = 17
         Caption = #21160#24577#35843#25972#29255#22823#23567
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ParentFont = False
         TabOrder = 0
       end
       object seSliceSize: TSpinEdit
-        Left = 64
-        Top = 52
+        Left = 88
+        Top = 18
         Width = 49
-        Height = 22
+        Height = 21
         Hint = '0 '#20351#29992#40664#35748
         MaxLength = 4
         MaxValue = 1024
@@ -329,46 +279,38 @@ object frmCastFile: TfrmCastFile
         TabOrder = 1
         Value = 0
       end
-      object seWaitReceivers: TSpinEdit
-        Left = 64
-        Top = 80
-        Width = 49
-        Height = 22
-        Hint = #31561#24453#23458#25143#25968#65292'0 '#20026#25163#21160
-        MaxLength = 4
-        MaxValue = 1024
-        MinValue = 0
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 2
-        Value = 0
-      end
-    end
-    object grp3: TGroupBox
-      Left = 11
-      Top = 128
-      Width = 337
-      Height = 129
-      Caption = #20449#24687
-      TabOrder = 2
-      object mmoLog: TMemo
+      object grp4: TGroupBox
         Left = 2
-        Top = 15
-        Width = 333
-        Height = 112
-        Align = alClient
-        BorderStyle = bsNone
-        Color = clBtnFace
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = 13977088
-        Font.Height = -11
-        Font.Name = 'MS Sans Serif'
-        Font.Style = []
-        ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
-        ParentFont = False
-        ReadOnly = True
-        ScrollBars = ssBoth
-        TabOrder = 0
+        Top = 80
+        Width = 166
+        Height = 42
+        Align = alBottom
+        Caption = #33258#21160#24320#22987
+        TabOrder = 2
+        object lbl6: TLabel
+          Left = 4
+          Top = 20
+          Width = 62
+          Height = 13
+          Alignment = taRightJustify
+          AutoSize = False
+          Caption = #23458#25143#31471#25968':'
+          Transparent = True
+        end
+        object seWaitReceivers: TSpinEdit
+          Left = 68
+          Top = 16
+          Width = 49
+          Height = 21
+          Hint = #31561#24453#23458#25143#25968#65292'0 '#20026#25163#21160
+          MaxLength = 4
+          MaxValue = 1024
+          MinValue = 0
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 0
+          Value = 0
+        end
       end
     end
   end

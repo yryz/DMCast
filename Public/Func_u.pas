@@ -23,17 +23,17 @@ function DiffTickCount(tOld, tNew: DWORD): DWORD; //计算活动时间差
 function GetSizeKMG(byteSize: Int64): string; //自动计算KB MB GB
 implementation
 
-function bit_isset(x: Dword; m: PByteArray): Boolean; {$IFNDEF VER150}inline; {$ENDIF}
+function bit_isset(x: Dword; m: PByteArray): Boolean; {$IF COMPILERVERSION >17.0}inline; {$IFEND}
 begin
   Result := Boolean(m[x div 8] and (1 shl (x mod 8)));
 end;
 
-procedure set_bit(x: Dword; m: PByteArray); {$IFNDEF VER150}inline; {$ENDIF}
+procedure set_bit(x: Dword; m: PByteArray); {$IF COMPILERVERSION >17.0}inline; {$IFEND}
 begin
   m[x div 8] := m[x div 8] or (1 shl (x mod 8));
 end;
 
-procedure clr_bit(x: Dword; m: PByteArray); {$IFNDEF VER150}inline; {$ENDIF}
+procedure clr_bit(x: Dword; m: PByteArray); {$IF COMPILERVERSION >17.0}inline; {$IFEND}
 begin
   m[x div 8] := m[x div 8] and not (1 shl (x mod 8));
 end;

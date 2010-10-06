@@ -1,5 +1,3 @@
-{    注意结构大小要和udpcast.h中的一样!!!
-}
 unit Config_u;
 
 interface
@@ -54,9 +52,6 @@ type
     { 不使用点对点，就算只有一个接收器 }
     dmcNoPointToPoint,
 
-    { 在发送端不要询问按键开始传输 }
-    dmcNoKeyBoard,
-
     { 流模式：允许接收器加入一个正在进行的传输 }
     dmcStreamMode
     );
@@ -67,44 +62,44 @@ type
     DSC_REDUCING                        //减少块
     );
 
-  TNetConfig = packed record
-    fileName: PAnsiChar;
+  TNetConfig = packed record            //sizeof=216
     ifName: PAnsiChar;                  //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
     localPort: Word;                    //9001
     remotePort: Word;                   //9000
 
-    blockSize: Integer;
-    sliceSize: Integer;
-
-    mcastRdv: PAnsiChar;
+    //采用组播会话/传输
+    mcastRdv: PAnsiChar;                //234.1.2.3  default nil
     ttl: Integer;
-    nrGovernors: Integer;
-    rateGovernor: array[0..MAX_GOVERNORS - 1] of Pointer; //struct rateGovernor_t *rateGovernor[MAX_GOVERNORS];
-    rateGovernorData: array[0..MAX_GOVERNORS - 1] of Pointer;
-    {int async;}
-    {int pointopoint;}
-    ref_tv: timeval;
-    discovery: TDiscovery;              //enum sizeof=4
-    { int autoRate; do queue watching using TIOCOUTQ, to avoid overruns }
-    flags: TDmcFlags;                     { non-capability command line flags }
-    capabilities: Integer;
+
+    //SOCKET OPTION
+    sockSendBufSize: Integer;
+    sockRecvBufSize: Integer;
+  end;
+  PNetConfig = ^TNetConfig;
+
+  TSendConfig = packed record
+    net: TNetConfig;
+    flags: TDmcFlags;                   { non-capability command line flags }
+    blockSize: Integer;
+
+    //传输速度管理(暂未实现)
+//    nrGovernors: Integer;
+//    rateGovernor: array[0..MAX_GOVERNORS - 1] of Pointer; //struct rateGovernor_t *rateGovernor[MAX_GOVERNORS];
+//    rateGovernorData: array[0..MAX_GOVERNORS - 1] of Pointer;
+
     min_slice_size: Integer;
     default_slice_size: Integer;
     max_slice_size: Integer;
-    rcvbuf: DWORD;                      //根据不同客户端缓冲区大小，取最小的
-    rexmit_hello_interval: Integer; { retransmission interval between hello's.
-    * If 0, hello message won't be retransmitted
-    }
-    autostart: Integer;                 { autostart after that many retransmits }
-    requestedBufSize: Integer;          { requested receiver buffer }
+
+    //rcvbuf: DWORD;                      //根据不同客户端缓冲区大小，取最小的
+    rexmit_hello_interval: Integer;     { sendHello 间隔  }
+
     { sender-specific parameters }
-    min_receivers: Integer;
-    min_receivers_wait: Integer;        //接收端数量满足min_receivers后，等待时间
+    min_receivers: Integer;             //接收端数量满足min_receivers后,自动开始
     max_receivers_wait: Integer;        //最大等待时间
-    retriesUntilDrop: Integer;
-    { receiver-specif parameters }
-    exitWait: Integer;                  { How many milliseconds to wait on program exit }
-    startTimeout: Integer;              { Timeout at start }
+
+    retriesUntilDrop: Integer;          //sendReqack片重试次数 （原 200）
+
     { FEC config }
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     fec_redundancy: Integer;            { how much fec blocks are added per group }
@@ -113,7 +108,40 @@ type
 {$ENDIF}
     rehelloOffset: Integer;             { 隔多少个块，发送一次hello }
   end;
-  PNetConfig = ^TNetConfig;
+  PSendConfig = ^TSendConfig;
+
+  //const
+  //  DEFAULT_CONFIG    : TNetConfig = (
+  //    ifName: 'eth0';                     //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
+  //    localPort: 9080;
+  //    remotePort: 8090;
+  //
+  //    blockSize: 1456;                    //这个值在一些情况下（如家用无线），设置大点效果会好些如10K
+  //    sliceSize: 32;
+  //
+  //    mcastRdv: nil;                      //传输地址
+  //    ttl: 1;
+  //
+  //    nrGovernors: 0;
+  //
+  //    flags: [dmcNoKeyBoard];             //没有控制台!
+  //    capabilities: 0;
+  //    min_slice_size: 32;
+  //    max_slice_size: 1456;
+  //    default_slice_size: 0;              //=0 则根据情况自动选择
+  //
+  //    rexmit_hello_interval: 0;           //retransmit hello message
+  //    autostart: 0;
+  //    requestedBufSize: 0;
+  //
+  //    min_receivers: seWaitReceivers.Value;
+  //    max_receivers_wait: 0;
+  //    min_receivers_wait: 0;
+  //    startTimeout: 0;
+  //
+  //    retriesUntilDrop: 30;
+  //    rehelloOffset: 50;
+  //    );
 
 implementation
 

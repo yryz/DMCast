@@ -84,11 +84,13 @@ begin
     WAIT_OBJECT_0 + 1:
       begin
         GetExitCodeThread(FHandles[1], DWORD(Result));
-        if Result > 0 then begin        //KeyPress
+        if Result > 0 then
+        begin                           //KeyPress
           FKeyPressed := True;
           FKey := Chr(Result);
           Result := 0;
-        end else
+        end
+        else
           Result := -1;
       end;
     WAIT_TIMEOUT:
@@ -117,9 +119,11 @@ begin
   end;
 
   FNrHandles := 1;
-  if enKeyPress then begin
+  if enKeyPress then
+  begin
     FHandles[1] := BeginThread(nil, 0, @WaitForKeyPress, Self, 0, DWORD(dwThID));
-    if FHandles[1] > 0 then Inc(FNrHandles);
+    if FHandles[1] > 0 then
+      Inc(FNrHandles);
   end;
 end;
 
@@ -127,12 +131,14 @@ procedure TConsole.Stop();
 var
   nBlock            : DWORD;
 begin
-  if FHandles[1] > 0 then begin
+  if FHandles[1] > 0 then
+  begin
     TerminateThread(FHandles[1], Cardinal(-1));
     WaitForSingleObject(FHandles[1], INFINITE);
     FHandles[1] := 0;
   end;
-  if Integer(FSocket) > 0 then begin
+  if Integer(FSocket) > 0 then
+  begin
     WSAEventSelect(FSocket, FHandles[0], 0);
     CloseHandle(FHandles[0]);
     nBlock := 0;
@@ -142,3 +148,4 @@ begin
 end;
 
 end.
+
