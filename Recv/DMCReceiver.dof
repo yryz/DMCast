@@ -125,7 +125,7 @@ Locale=2052
 CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
-FileDescription=数据多播协议(可靠)
+FileDescription=数据多播协议
 FileVersion=1.0.1.0
 InternalName=
 LegalCopyright=HouSoft

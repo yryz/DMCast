@@ -1,6 +1,6 @@
 object frmCastFile: TfrmCastFile
-  Left = 392
-  Top = 168
+  Left = 531
+  Top = 248
   Width = 591
   Height = 372
   Caption = #25991#20214#22810#25773' v1.0a'
@@ -27,7 +27,7 @@ object frmCastFile: TfrmCastFile
   object lvClient: TListView
     Left = 0
     Top = 65
-    Width = 196
+    Width = 292
     Height = 254
     Align = alClient
     Columns = <
@@ -37,6 +37,10 @@ object frmCastFile: TfrmCastFile
       item
         Caption = #23458#25143#31471
         Width = 110
+      end
+      item
+        Caption = 'Sock'#32531#20914
+        Width = 66
       end>
     LargeImages = ImageList1
     ReadOnly = True
@@ -46,7 +50,7 @@ object frmCastFile: TfrmCastFile
     ViewStyle = vsReport
   end
   object pb1: TProgressBar
-    Left = 196
+    Left = 292
     Top = 65
     Width = 28
     Height = 254
@@ -122,55 +126,56 @@ object frmCastFile: TfrmCastFile
     end
   end
   object pnl1: TPanel
-    Left = 224
+    Left = 320
     Top = 65
-    Width = 359
+    Width = 263
     Height = 254
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 3
     object grp1: TGroupBox
-      Left = 11
+      Left = 0
       Top = 0
-      Width = 160
+      Width = 263
       Height = 124
+      Align = alTop
       Caption = #29366#24577
       TabOrder = 0
       object lbl1: TLabel
-        Left = 10
+        Left = 8
         Top = 24
-        Width = 49
+        Width = 67
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #24050#20256#36755':'
+        Caption = #24050#32463#20256#36755':'
         Transparent = True
       end
       object lbl2: TLabel
-        Left = 10
+        Left = 8
         Top = 45
-        Width = 49
+        Width = 67
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #21457#36895#24230':'
+        Caption = #20256#36755#36895#24230':'
         Transparent = True
       end
       object lbl3: TLabel
-        Left = 10
+        Left = 8
         Top = 67
-        Width = 49
+        Width = 67
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #37325#20256#22359':'
+        Caption = #37325#20256#22359#25968':'
         Transparent = True
       end
       object lbl4: TLabel
-        Left = 10
+        Left = 8
         Top = 88
-        Width = 49
+        Width = 67
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
@@ -179,7 +184,7 @@ object frmCastFile: TfrmCastFile
         Visible = False
       end
       object lblSliceSize: TLabel
-        Left = 67
+        Left = 83
         Top = 88
         Width = 80
         Height = 13
@@ -195,7 +200,7 @@ object frmCastFile: TfrmCastFile
         Visible = False
       end
       object lblRexmit: TLabel
-        Left = 67
+        Left = 83
         Top = 67
         Width = 80
         Height = 13
@@ -210,7 +215,7 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lblSpeed: TLabel
-        Left = 67
+        Left = 83
         Top = 45
         Width = 80
         Height = 13
@@ -225,7 +230,7 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lblTransBytes: TLabel
-        Left = 67
+        Left = 83
         Top = 24
         Width = 80
         Height = 13
@@ -241,10 +246,11 @@ object frmCastFile: TfrmCastFile
       end
     end
     object grp2: TGroupBox
-      Left = 177
-      Top = 0
-      Width = 170
-      Height = 124
+      Left = 0
+      Top = 124
+      Width = 263
+      Height = 130
+      Align = alClient
       Caption = #35774#32622
       TabOrder = 1
       object lbl5: TLabel
@@ -281,8 +287,8 @@ object frmCastFile: TfrmCastFile
       end
       object grp4: TGroupBox
         Left = 2
-        Top = 80
-        Width = 166
+        Top = 86
+        Width = 259
         Height = 42
         Align = alBottom
         Caption = #33258#21160#24320#22987

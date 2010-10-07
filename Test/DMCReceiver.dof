@@ -94,7 +94,7 @@ OutputDir=..\bin
 UnitOutputDir=z:\
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
+SearchPath=..\Include;..\Public;..\Recv
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
 Conditionals=
 DebugSourceDirs=
@@ -144,8 +144,8 @@ Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=5
-Item0=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
-Item1=..\Include;..\Public;..\Recv
+Item0=..\Include;..\Public;..\Recv
+Item1=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
 Item2=..\Include\win32api
 Item3=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
 Item4=E:\程序\Delphi\HOU网络管理\Include\win32api

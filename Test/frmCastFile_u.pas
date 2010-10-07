@@ -37,7 +37,7 @@ type
   private
     FNrOnline: Integer;
   public
-    function Add(index: Integer; addr: PSockAddrIn): Boolean;
+    function Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;
     function Remove(index: Integer; addr: PSockAddrIn): Boolean;
     function GetNrOnline(): Integer;
   end;
@@ -264,7 +264,7 @@ end;
 
 { TPartsStats }
 
-function TPartsStats.Add(index: Integer; addr: PSockAddrIn): Boolean;
+function TPartsStats.Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;
 var
   Item              : TListItem;
 begin
@@ -273,6 +273,7 @@ begin
   Item := frmCastFile.lvClient.Items.Add;
   Item.Caption := IntToStr(index);
   Item.SubItems.Add(inet_ntoa(addr^.sin_addr));
+  Item.SubItems.Add(GetSizeKMG(sockBuf));
 
   PostMessage(frmCastFile.Handle, WM_UPDATE_ONLINE, 0, 0);
 end;
@@ -356,6 +357,8 @@ begin
 
     //ƒ¨»œ≈‰÷√
     DMCConfigFill(g_Config);
+    //g_Config.flags := [dmcNoPointToPoint];
+    //g_Config.net.mcastRdv:='239.0.0.1';
 
     if chkAutoSliceSize.Checked then
       g_Config.flags := g_Config.flags + [dmcNotFullDuplex];
@@ -415,7 +418,6 @@ end;
 procedure TfrmCastFile.FormCreate(Sender: TObject);
 begin
   pb1.DoubleBuffered := True;
-  seWaitReceivers.MaxValue := MAX_CLIENTS;
 end;
 
 procedure TfrmCastFile.UpdateOnline;

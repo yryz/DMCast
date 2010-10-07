@@ -31,7 +31,7 @@ type
 
   //填充默认配置
 function DMCConfigFill(var config: TRecvConfig): Boolean; stdcall;
-//开始会话
+//开始会话  TransStats 可以为nil
 function DMCNegoCreate(config: PRecvConfig; TransStats: IReceiverStats;
   var lpFifo: Pointer): Pointer; stdcall;
 //等待数据缓冲区可读
@@ -52,7 +52,7 @@ begin
   begin
     with net do
     begin
-      ifName := 'eth0';                 //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
+      ifName := nil;                    //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
       localPort := 8090;                //9001
       remotePort := 9080;               //9000
 
@@ -61,7 +61,7 @@ begin
 
       //SOCKET OPTION
       sockSendBufSize := 0;             //default
-      sockRecvBufSize := 0;             //default
+      sockRecvBufSize := 256 * 1024;    //如果接收Recv者性能较差，建议设置足够的缓冲区，减少丢包
     end;
 
     flags := [];

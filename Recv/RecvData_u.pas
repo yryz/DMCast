@@ -114,7 +114,6 @@ type
     //引用
     FFifo: TFifo;
     FConfig: PRecvConfig;
-    FStats: IReceiverStats;
     FNego: TNegotiate;
   public
     constructor Create;
@@ -436,7 +435,8 @@ end;
 function TSlice.DoFree: Integer;
 begin
   Result := FBytes;
-  FStats.AddBytes(FBytes);
+  if Assigned(FStats) then
+    FStats.AddBytes(FBytes);
 
   // signal data received (END信号数据)
   if FBytes = 0 then
@@ -537,7 +537,6 @@ begin
   FFifo := Fifo;
   FNego := Nego;
   FConfig := Nego.Config;
-  FStats := Nego.Stats;
 
   FReceivedSliceNo := -1;
   FFreeSlicesPC := TProduceConsum.Create(NR_SLICES, 'free slices');
@@ -802,7 +801,6 @@ end;
 procedure TReceiver.Execute;
 var
   len               : Integer;
-  isNoData          : Boolean;
 
   dataMsg           : TServerDataMsg;
   msg               : TNetMsg;
@@ -816,7 +814,6 @@ begin
   msg.head.len := sizeof(dataMsg);
   msg.data.len := FConfig^.blockSize;
 
-  isNoData := True;
   while FNego.TransState in [tsTransing, tsNego] do
   begin
     if (FDp.CurrentSlice <> nil)
@@ -843,11 +840,8 @@ begin
     case TOpCode(ntohs(dataMsg.opCode)) of
       CMD_DATA:
         begin
-          if isNoData then
-          begin                         //接收到第一块数据
-            isNoData := False;
+          if FNego.TransState = tsNego then //接收到第一块数据
             FNego.TransState := tsTransing;
-          end;
 
           Slice := FDp.FindSlice(ntohl(dataMsg.dataBlock.sliceNo));
           if Slice <> nil then
@@ -859,11 +853,8 @@ begin
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
       CMD_FEC:
         begin
-          if isNoData then
-          begin
-            isNoData := False;
-            FStats.TransStateChange(tsTransing);
-          end;
+          if FNego.TransState = tsNego then //接收到第一块数据
+            FNego.TransState := tsTransing;
 
           if ProcessFecBlock(ntohs(dataMsg.fecBlock.stripes),
             ntohl(dataMsg.fecBlock.sliceNo),

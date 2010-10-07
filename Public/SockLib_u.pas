@@ -1,3 +1,4 @@
+{$INCLUDE def.inc}
 unit SockLib_u;
 
 interface
@@ -21,6 +22,7 @@ type
     imr_interface: in_addr;             //本地接口地址
   end;
   PIp_mreq = ^TIp_mreq;
+
   //IO Vector
   PIOVec = ^TIOVec;
   TIOVec = packed record
@@ -44,6 +46,7 @@ type
     FAddrLen: Integer;
     FNetIf: TNetIf;
     FCtrlAddr: TSockAddrIn;             //默认广播[会话]
+    FDataAddr: TSockAddrIn;             //默认组播[传输数据]
   private
     function GetSendBufSize(): Integer;
     function GetRecvBufSize(): Integer;
@@ -90,6 +93,7 @@ type
   public
     property Socket: TSocket read FSocket;
     property CtrlAddr: TSockAddrIn read FCtrlAddr write FCtrlAddr;
+    property DataAddr: TSockAddrIn read FDataAddr write FDataAddr;
     property SendBufSize: Integer read GetSendBufSize write SetSendBufSize;
     property RecvBufSize: Integer read GetRecvBufSize write SetRecvBufSize;
     property MCastTTL: Integer read GetMCastTTL write SetMCastTTL;
@@ -97,16 +101,13 @@ type
   end;
 
   TUDPSenderSocket = class(TUDPSocket)
-  private
-    FDataAddr: TSockAddrIn;             //默认组播[传输数据]
   public
     constructor Create(config: PNetConfig; isPointToPoint: Boolean;
       var tryFullDuplex: Boolean);
     function SendDataMsg(const msg: TNetMsg): Integer;
     procedure SetDataAddr(inAddr: TInAddr);
     procedure CopyDataAddrToMsg(var dst);
-  public
-    property DataAddr: TSockAddrIn read FDataAddr write FDataAddr;
+
   end;
 
   TUDPReceiverSocket = class(TUDPSocket)
@@ -152,6 +153,7 @@ const
   MAXLEN_PHYSADDR   = 8;
   MAXLEN_IFDESCR    = 256;
   MAX_INTERFACE_NAME_LEN = 256;
+
 type
   PMIB_IPADDRROW = ^MIB_IPADDRROW;
   MIB_IPADDRROW = record
@@ -218,9 +220,6 @@ class function TUDPSocket.GetNetIf(wanted: PAnsiChar; var net_if: TNetIf): Boole
   var
     j               : Integer;
   begin
-
-    { Find the corresponding interface row (for name and
-      * MAC address) }
     for j := 0 to iftab^.dwNumEntries - 1 do
     begin
       Result := @iftab^.table[j];
@@ -242,22 +241,30 @@ var
 
   iprow, chosen     : PMIB_IPADDRROW;
   chosenIf          : PMIB_IFROW;
-  wsaData           : TWSAData;         { Winsock implementation details }
 
-  dwIp              : ULONG;
-  goodness, lastGoodness: Integer;
   wantedAddress     : in_addr;
   isAddress         : Boolean;
 
   ifrow             : PMIB_IFROW;
   iaddr             : DWORD;
   isEther           : Boolean;
+label
+  fit;
 begin
   Result := False;
+  if wanted = nil then
+  begin
+    net_if.name := '*';
+    net_if.addr.s_addr := 0;
+    net_if.bcast.s_addr := $FFFFFFFF;
+
+    Result := True;
+    Exit;
+  end;
+
   etherNo := -1;
   wantedEtherNo := -2;                  { Wanted ethernet interface }
   chosen := nil;
-  lastGoodness := 0;
 
   if (wanted <> nil) and INET_ATON(wanted, @wantedAddress) then
     isAddress := True
@@ -266,10 +273,6 @@ begin
     isAddress := False;
     wantedAddress.s_addr := 0;
   end;
-
-  { WINSOCK initialization }
-  if (WSAStartup(MAKEWORD(2, 0), wsaData) <> 0) then { Load Winsock DLL }
-    raise Exception.Create('WSAStartup() failed!');
 
   m := 0;
   GetIpAddrTable(nil, m, TRUE);
@@ -285,108 +288,64 @@ begin
     if TryStrToInt(PAnsiChar(@wanted[3]), i) then
       wantedEtherNo := i;
 
+  //筛选吻合的接口
   for i := 0 to iptab^.dwNumEntries - 1 do
   begin
-    goodness := -1;
     isEther := False;
 
     iprow := @iptab^.table[i];
     iaddr := iprow^.dwAddr;
 
     ifrow := getIfRow(iftab, iprow^.dwIndex);
-    if (ifrow <> nil) and (ifrow^.dwPhysAddrLen = 6)
+    if (ifrow <> nil)
+      and (ifrow^.dwPhysAddrLen = 6)
       and (iprow^.dwBCastAddr > 0) then
     begin
       isEther := True;
       Inc(etherNo);
     end;
 
-    if (wanted <> nil) then
+    if isAddress and (iaddr = wantedAddress.s_addr) then //192.168.1.1
+      goto fit
+    else if isEther and (wantedEtherNo = etherNo) then //eth0
+      goto fit
+    else if (ifrow^.dwPhysAddrLen > 0) then //MAC地址
     begin
-      if isAddress and (iaddr = wantedAddress.s_addr) then
-      begin                             //192.168.1.1
-        goodness := 8;
-      end
-      else if isEther and (wantedEtherNo = etherNo) then
-      begin                             //eth0
-        goodness := 9;
-      end
-      else if (ifrow^.dwPhysAddrLen > 0) then
-      begin                             //MAC地址
-        ptr := wanted;
-        for j := 0 to ifrow^.dwPhysAddrLen - 1 do
-        begin
-          if ptr^ = #0 then
-            Break;
+      ptr := wanted;
+      for j := 0 to ifrow^.dwPhysAddrLen - 1 do
+      begin
+        if ptr^ = #0 then
+          Break;
 
-          if not TryStrToInt('$' + ptr^ + PAnsiChar(ptr + 1)^, n)
-            or (n <> ifrow^.bPhysAddr[j]) then
-            Break;
+        if not TryStrToInt('$' + ptr^ + PAnsiChar(ptr + 1)^, n)
+          or (n <> ifrow^.bPhysAddr[j]) then
+          Break;
 
-          Inc(ptr, 2);
-          if (ptr^ = '-') or (ptr^ = ':') then
-            Inc(ptr);
-        end;
-        if (j = ifrow^.dwPhysAddrLen) then
-          goodness := 9;
+        Inc(ptr, 2);
+        if (ptr^ = '-') or (ptr^ = ':') then
+          Inc(ptr);
       end;
-    end
-    else
-    begin
-      if (iaddr = 0) then
-      begin
-        { disregard interfaces whose address is zero }
-        goodness := 1;
-      end
-      else if (iaddr = htonl($7F000001)) then
-      begin                             //127.0.0.1
-        { disregard localhost type devices }
-        goodness := 2;
-      end
-      else if (isEther) then
-      begin
-        { prefer ethernet }
-        goodness := 6;
-      end
-      else if (ifrow^.dwPhysAddrLen > 0) then
-      begin
-        { then prefer interfaces which have a physical address }
-        goodness := 4;
-      end
-      else
-      begin
-        goodness := 3;
-      end;
+      if (j = ifrow^.dwPhysAddrLen) then
+        goto fit;
     end;
 
-    goodness := goodness * 2;
-    { If all else is the same, prefer interfaces that
-    * have broadcast }
-    if (goodness >= lastGoodness) then
-    begin
-      { Privilege broadcast-enabled interfaces }
-      if (iprow^.dwBCastAddr > 0) then
-        Inc(goodness);
-    end;
+    Continue;
 
-    if (goodness > lastGoodness) then
-    begin
-      chosen := iprow;
-      chosenIf := ifrow;
-      lastGoodness := goodness;
-    end;
-  end;
+    fit:
+    chosen := iprow;
+    chosenIf := ifrow;
+    Break;
+  end;                                  //end for
 
   if (chosen = nil) then
   begin
-{$IFDEF EN_FATAL}
+{$IFDEF DMC_FATAL_ON}
     OutLog2(llFatal, 'No suitable network interface found!'#13#10
       + 'The following interfaces are available:');
     for i := 0 to iptab^.dwNumEntries - 1 do
     begin
       iprow := @iptab^.table[i];
-      dwIp := ntohl(iprow^.dwAddr);
-      OutLog2(llFatal, inet_ntoa(TInAddr(dwIp)) + ' on '
+      OutLog2(llFatal, inet_ntoa(TInAddr(iprow^.dwAddr)) + ' on '
         + PAnsiChar(@getIfRow(iftab, iprow^.dwIndex)^.bDescr)); //Unicode
     end;
 {$ENDIF}
@@ -568,6 +527,18 @@ begin
   else
     InitSockAddress(GetDefaultBCastAddress(), FRemotePort, FCtrlAddr);
 
+  if IsBCastAddress(@FCtrlAddr) then
+  begin
+    if (config^.ttl > 1) then
+      raise Exception.Create('BCast TTL not more than 1');
+    BCastOption(True);
+  end
+  else if IsMCastAddress(@FCtrlAddr) then
+  begin
+    MCastOption(FNetIf.addr, FCtrlAddr.sin_addr, True);
+    SetMCastTTL(config^.ttl);
+  end;
+
   //传输缓冲区大小
   if (config^.sockSendBufSize > 0) then
     SetSendBufSize(config^.sockSendBufSize);
@@ -689,7 +660,7 @@ end;
 
 function TUDPSocket.GetDefaultMCastAddress(): TInAddr;
 begin
-  Result.S_addr := FNetIf.addr.S_addr and htonl($07FFFFFF) or htonl($E8000000);
+  Result.S_addr := FNetIf.addr.S_addr and htonl($07FFFFFF) or htonl($EF000000);
 end;
 
 function TUDPSocket.GetDefaultBCastAddress(): TInAddr;
@@ -744,18 +715,9 @@ begin
   else
   begin
     if IsBCastAddress(@FCtrlAddr) then
-    begin
-      if (config^.ttl > 1) then
-        raise Exception.Create('BCast TTL not more than 1');
-      BCastOption(True);
-      InitSockAddress(GetDefaultMCastAddress(), FRemotePort, FDataAddr);
-    end
+      InitSockAddress(GetDefaultMCastAddress(), FRemotePort, FDataAddr)
     else if IsMCastAddress(@FCtrlAddr) then
-    begin
-      MCastOption(FNetIf.addr, FCtrlAddr.sin_addr, True);
-      SetMCastTTL(config^.ttl);
       CopyAddrFrom(@FDataAddr, @FCtrlAddr);
-    end;
   end;
 end;
 
@@ -824,9 +786,24 @@ end;
 
 procedure TUDPReceiverSocket.SetDataAddrFromMsg(const src);
 begin
-  if IsMCastAddress(@TSockAddrIn(src)) then //加入组播
-    MCastOption(FNetIf.addr, TSockAddrIn(src).sin_addr, True);
+  move(src, FDataAddr.sin_addr, SizeOf(TInAddr));
+  if IsMCastAddress(@FDataAddr) then    //加入组播
+    MCastOption(FNetIf.addr, FDataAddr.sin_addr, True);
 end;
+
+procedure _Init_;
+var
+  wsaData           : TWSAData;
+begin
+  if (WSAStartup(MAKEWORD(2, 0), wsaData) <> 0) then { Load Winsock DLL }
+    raise Exception.Create('WSAStartup() failed!');
+end;
+
+initialization
+  _Init_;
+
+finalization
+  WSACleanup;
 
 end.
 

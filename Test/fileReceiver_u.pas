@@ -239,11 +239,11 @@ begin
   if Assigned(Fifo) then
     FileWriter := TFileWriter.Create(fileName, Fifo);
 
-  FileWriter.WaitFor;
-  FileWriter.Free;
-
   DMCNegoWaitEnded(Nego);
   DMCNegoDestroy(Nego);
+
+  FileWriter.WaitFor;
+  FileWriter.Free;
 end;
 
 end.

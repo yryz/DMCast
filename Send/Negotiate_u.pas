@@ -95,7 +95,7 @@ begin
     Result := True;
   end
   else if (dmcNoPointToPoint in FConfig^.flags)
-    and (dmcAsyncMode in FConfig^.flags)
+    or (dmcAsyncMode in FConfig^.flags)
     and (dmcBCastMode in FConfig^.flags) then
     Result := False
   else
@@ -107,9 +107,6 @@ function TNegotiate.SendConnectionReply(client: PSockAddrIn; capabilities: Integ
 var
   reply             : TConnectReply;
 begin
-  if (rcvbuf = 0) then
-    rcvbuf := 65536;
-
   reply.opCode := htons(Word(CMD_CONNECT_REPLY));
   reply.clNr := htonl(FParts.Add(client, capabilities, rcvbuf,
     dmcPointToPoint in FConfig^.flags));
@@ -388,13 +385,14 @@ begin
 
   if not LongBool(FCapabilities and CAP_NEW_GEN) then
   begin                                 //不支持组播，双工...
-    FUSocket.SetDataAddr(FUSocket.CtrlAddr.sin_addr);
+    if not isPtP then
+      FUSocket.SetDataAddr(FUSocket.CtrlAddr.sin_addr);
     FConfig^.flags := FConfig^.flags - [dmcFullDuplex, dmcNotFullDuplex];
   end
   else
   begin
-    if not (dmcAsyncMode in FConfig^.flags) and
-      not (dmcStreamMode in FConfig^.flags) then
+    if not (dmcAsyncMode in FConfig^.flags)
+      and not (dmcStreamMode in FConfig^.flags) then
     begin                               //不是异步或流模式(接收者固定)
       if FUSocket.CtrlAddr.sin_addr.S_addr <> FUSocket.DataAddr.sin_addr.S_addr then
       begin                             //重设控制地址
@@ -408,12 +406,8 @@ begin
 end;
 
 procedure TNegotiate.EndTrans();
-var
-  i                 : Integer;
 begin
-  { remove all participants }
-  for i := 0 to MAX_CLIENTS - 1 do
-    FParts.Remove(i);
+  FParts.Clear();
 end;
 
 function TNegotiate.PostDoTransfer: Boolean;
@@ -424,7 +418,8 @@ end;
 procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
-  FStats.TransStateChange(Value);
+  if Assigned(FStats) then
+    FStats.TransStateChange(Value);
 end;
 
 end.

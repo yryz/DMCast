@@ -85,7 +85,8 @@ begin
     * 1. should not produce more than size
     * 2. do not pass consumed + size
     * }
-  if (amount > FSize) then begin
+  if (amount > FSize) then
+  begin
     raise Exception.CreateFmt('Buffer overflow in produce %s: %d > %d '#10,
       [FName, amount, FSize]);
     Exit;
@@ -96,7 +97,8 @@ begin
     Dec(produced, FDoubSize);
 
   if (produced > consumed + FSize) or
-    ((produced < consumed) and (produced > consumed - FSize)) then begin
+    ((produced < consumed) and (produced > consumed - FSize)) then
+  begin
     raise Exception.CreateFmt('Buffer overflow in produce %s: %d > %d[%d]'#10,
       [FName, produced, consumed, FSize]);
     Exit;
@@ -134,7 +136,8 @@ begin
       WriteLn(Format('%s: got %d bytes', [FName, amount]));
 {$ENDIF}
       Result := amount;
-    end else
+    end
+    else
     begin
       EnterCriticalSection(FLock);
       while (not FAtEnd) do
@@ -152,11 +155,13 @@ begin
             r := WaitForSingleObject(FEvent, waitTime);
             EnterCriticalSection(FLock);
 
-            if (r = WAIT_TIMEOUT) then begin
+            if (r = WAIT_TIMEOUT) then
+            begin
               amount := GetProducedAmount();
               Break;
             end;
-        end else
+        end
+        else
           Break;
       end;                              //end while
       LeaveCriticalSection(FLock);
@@ -237,3 +242,4 @@ begin
 end;
 
 end.
+

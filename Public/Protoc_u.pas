@@ -94,14 +94,14 @@ type
     clNr: Integer;
     blockSize: Integer;
     capabilities: Integer;
-    mcastAddr: array[0..15] of char;    { provide enough place for IPV6 }
+    mcastAddr: array[0..15] of Byte;    { provide enough place for IPV6 }
   end;
 
   THello = packed record
     opCode: Word;
     reserved: SmallInt;
     capabilities: Integer;
-    mcastAddr: array[0..15] of char;    { provide enough place for IPV6 }
+    mcastAddr: array[0..15] of Byte;    { provide enough place for IPV6 }
     blockSize: SmallInt;
   end;
 

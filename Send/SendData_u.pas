@@ -10,8 +10,13 @@ uses
   HouLog_u;
 
 const
-  NR_SLICES         = 2;
+  //性能参数
+  DOUBLING_SETP     = 4;                //sliceSize 增加 sliceSize div DOUBLING_SETP
+  REDOUBLING_SETP   = 2;                //如果lastGoodBlocks小于sliceSize div REDOUBLING_SETP，那么sliceSize以后者为准
+  MIN_CONT_SLICE    = 5;                //最小连续片数，达到则转为增加状态
 
+  NR_SLICES         = 2;
+  RC_MSG_QUEUE_SIZE = MAX_CLIENTS;      //反馈消息队列大小
 type
   TSlice = class;
   TDataPool = class;
@@ -392,7 +397,7 @@ begin
       Break;                            //传输包时若有反馈消息(一般为需要重传)，先中止传输，处理
   end;                                  //end while
 
-  if nrRetrans > 0 then
+  if (nrRetrans > 0) and Assigned(FStats) then
     FStats.AddRetrans(nrRetrans);       //更新状态
 
   if i <> nrBlocks
@@ -828,7 +833,8 @@ begin
   FFifo.FreeMemPC.Produce(Result);
   FreeSlice(Slice);                     //释放片
 
-  FStats.AddBytes(Result);              //更新状态
+  if Assigned(FStats) then
+    FStats.AddBytes(Result);            //更新状态
 end;
 
 function TDataPool.FindSlice(Slice1, Slice2: TSlice; sliceNo: Integer): TSlice;

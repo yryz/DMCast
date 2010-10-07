@@ -30,8 +30,8 @@ type
   //API接口
 
   //填充默认配置
-function DMCConfigFill(var config: TSendConfig): Boolean;
-//开始会话
+procedure DMCConfigFill(var config: TSendConfig);
+//开始会话  TransStats,PartsStats 可以为nil
 function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
   PartsStats: IPartsStats; var lpFifo: Pointer): Pointer; stdcall;
 //等待缓冲区可写
@@ -45,19 +45,21 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 implementation
 
-function DMCConfigFill(var config: TSendConfig): Boolean;
+procedure DMCConfigFill(var config: TSendConfig);
 begin
   FillChar(config, SizeOf(config), 0);
   with config do
   begin
     with net do
     begin
-      ifName := 'eth0';                 //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
+      ifName := nil;           //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil(INADDR_ANY)
       localPort := 9080;                //9001
       remotePort := 8090;               //9000
 
       mcastRdv := nil;
       ttl := 1;
+
+      sockRecvBufSize := 64 * 1024;
     end;
 
     flags := [];
@@ -101,6 +103,7 @@ end;
 
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean;
 begin
+  Result := True;
   try
     if (dwBytes > 0) then
     begin
@@ -124,8 +127,8 @@ end;
 
 function DMCDoTransfer(lpNego: Pointer): Boolean;
 begin
+  Result := True;
   try
-    Result := True;
     TSenderThread(lpNego).Nego.PostDoTransfer;
   except on e: Exception do
     begin
@@ -139,9 +142,8 @@ end;
 
 function DMCNegoDestroy(lpNego: Pointer): Boolean;
 begin
+  Result := True;
   try
-    Result := True;
-
     with TSenderThread(lpNego) do
     begin
       Terminate;

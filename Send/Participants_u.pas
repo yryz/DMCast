@@ -4,7 +4,10 @@ unit Participants_u;
 
 interface
 uses
-  Windows, Sysutils, WinSock, Config_u, Func_u, IStats_u;
+  Windows, Sysutils, WinSock, Func_u, IStats_u;
+
+const
+  MAX_CLIENTS       = 512;              //允许最大客户端，极限1456 * 8
 
 type
   PClientDesc = ^TClientDesc;
@@ -24,11 +27,12 @@ type
     FClientTable: TClientTable;
     FPartsStats: IPartsStats;
   public
-    constructor Create();
+    constructor Create;
     destructor Destroy; override;
 
     function IsValid(i: Integer): Boolean;
     function Remove(i: Integer): Boolean; //is safe remove
+    function Clear(): Integer;
     function Lookup(addr: PSockAddrIn): Integer;
     function Add(addr: PSockAddrIn; capabilities: Integer; rcvbuf: DWORD_PTR;
       pointopoint: Boolean): Integer;
@@ -66,12 +70,12 @@ begin
   if i >= 0 then
     Exit;
 
-  for i := 0 to MAX_CLIENTS - 1 do
+  for i := 0 to High(FClientTable) do
   begin
     if not FClientTable[i].used then
     begin
       if Assigned(FPartsStats) then
-        if not FPartsStats.Add(i, addr) then
+        if not FPartsStats.Add(i, addr, rcvbuf) then
           Exit;
 
       FClientTable[i].addr := addr^;
@@ -123,7 +127,7 @@ var
   i                 : Integer;
 begin
   Result := -1;
-  for i := 0 to MAX_CLIENTS - 1 do
+  for i := 0 to High(FClientTable) do
   begin
     if FClientTable[i].used and
       (FClientTable[i].addr.sin_addr.S_addr = addr.sin_addr.S_addr) then
@@ -202,6 +206,17 @@ begin
 {$ENDIF}
     end;
   end;
+end;
+
+function TParticipants.Clear: Integer;
+var
+  i                 : Integer;
+begin
+  { remove all participants }
+  Result := 0;
+  for i := 0 to High(FClientTable) do
+    if Remove(i) then
+      Inc(Result);
 end;
 
 end.

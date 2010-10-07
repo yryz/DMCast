@@ -5,18 +5,7 @@ uses
   Windows, Sysutils, WinSock;
 
 const
-  //性能参数
-  DOUBLING_SETP     = 4;                //sliceSize 增加 sliceSize div DOUBLING_SETP
-  REDOUBLING_SETP   = 2;                //如果lastGoodBlocks小于sliceSize div REDOUBLING_SETP，那么sliceSize以后者为准
-  MIN_CONT_SLICE    = 5;                //最小连续片数，达到则转为增加状态
-
-  //一般常量
-  MAX_CLIENTS       = 512;              //允许最大客户端（并非越大越好）
-  RC_MSG_QUEUE_SIZE = MAX_CLIENTS;      //反馈消息队列大小
   DEFLT_STAT_PERIOD = 1000;             //状态输出周期 1s
-
-const
-  MAX_GOVERNORS     = 10;
 
 type
   TDmcFlag = (
@@ -109,39 +98,6 @@ type
     rehelloOffset: Integer;             { 隔多少个块，发送一次hello }
   end;
   PSendConfig = ^TSendConfig;
-
-  //const
-  //  DEFAULT_CONFIG    : TNetConfig = (
-  //    ifName: 'eth0';                     //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
-  //    localPort: 9080;
-  //    remotePort: 8090;
-  //
-  //    blockSize: 1456;                    //这个值在一些情况下（如家用无线），设置大点效果会好些如10K
-  //    sliceSize: 32;
-  //
-  //    mcastRdv: nil;                      //传输地址
-  //    ttl: 1;
-  //
-  //    nrGovernors: 0;
-  //
-  //    flags: [dmcNoKeyBoard];             //没有控制台!
-  //    capabilities: 0;
-  //    min_slice_size: 32;
-  //    max_slice_size: 1456;
-  //    default_slice_size: 0;              //=0 则根据情况自动选择
-  //
-  //    rexmit_hello_interval: 0;           //retransmit hello message
-  //    autostart: 0;
-  //    requestedBufSize: 0;
-  //
-  //    min_receivers: seWaitReceivers.Value;
-  //    max_receivers_wait: 0;
-  //    min_receivers_wait: 0;
-  //    startTimeout: 0;
-  //
-  //    retriesUntilDrop: 30;
-  //    rehelloOffset: 50;
-  //    );
 
 implementation
 

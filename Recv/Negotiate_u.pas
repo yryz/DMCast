@@ -126,17 +126,19 @@ begin
 
     if FUSocket.SelectSocks(@FUSocket.Socket, 1, 1.5, True) <= 0 then
       Continue;
+
     msgLen := FUSocket.RecvCtrlMsg(ctrlMsg, SizeOf(ctrlMsg),
       PSockAddrIn(@FUSocket.CtrlAddr)^);
-    if (msgLen = 0) then
-      Continue;
+
     if (msgLen < 0) then
     begin
 {$IFDEF CONSOLE}
       WriteLn('problem getting data from client.errorno:', GetLastError);
 {$ENDIF}
       Break;                            { don't panic if we get weird messages }
-    end;
+    end
+    else if (msgLen = 0) then
+      Continue;
 
     case TOpCode(ntohs(ctrlMsg.opCode)) of
       CMD_CONNECT_REPLY:
@@ -201,7 +203,8 @@ end;
 procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
-  FStats.TransStateChange(Value);
+  if Assigned(FStats) then
+    FStats.TransStateChange(Value);
 end;
 
 end.

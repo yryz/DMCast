@@ -2,11 +2,7 @@ unit IStats_u;
 
 interface
 uses
-  Windows, Sysutils, Messages, WinSock,
-  Config_u;
-
-type
-  TUMsgType = (umtMsg, umtDebug, umtWarn, umtError, umtFatal);
+  Windows, Sysutils, Messages, WinSock;
 
 type
   { Sender/Receiver 传输状态统计 }
@@ -37,7 +33,7 @@ type
   { Sender 成员变更 }
   IPartsStats = interface
     ['{20100930-1049-0000-0000-000000000001}']
-    function Add(index: Integer; addr: PSockAddrIn): Boolean;
+    function Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;
     function Remove(index: Integer; addr: PSockAddrIn): Boolean;
     function GetNrOnline(): Integer;
   end;

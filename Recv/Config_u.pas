@@ -31,9 +31,6 @@ const
 
   FLAG_IGNORE_LOST_DATA = $0400;
 
-const
-  MAX_GOVERNORS     = 10;
-
 type
   TDmcFlag = (
     // 接收端被动Listen。如果发送端在异步模式下运行
@@ -44,7 +41,7 @@ type
     dmcIgnoreLostData);
   TDmcFlags = set of TDmcFlag;
 
-  TNetConfig = packed record            //sizeof=216
+  TNetConfig = packed record
     ifName: PAnsiChar;                  //eht0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil
     localPort: Word;                    //9001
     remotePort: Word;                   //9000
