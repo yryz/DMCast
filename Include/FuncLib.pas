@@ -68,7 +68,8 @@ begin
   Result := '';
   j := 0;
   try
-    for i := 1 to Length(Str) div 2 do begin
+    for i := 1 to Length(Str) div 2 do
+    begin
       Result := Result + Char(StrToInt('$' + Copy(Str, i * 2 - 1, 2)) xor XorKey[j]);
       j := (j + 1) mod 8;
     end;
@@ -145,7 +146,8 @@ begin
     Result := FloatToStr2(byteSize / 1024, 2) + ' KB' //format2('%.2f KB', [byteSize / 1024])
   else if byteSize < 1024 * 1024 * 1024 then
     Result := FloatToStr2(byteSize / (1024 * 1024), 2) + ' MB' //format('%.2f MB', [byteSize / (1024 * 1024)])
-  else Result := FloatToStr2(byteSize / (1024 * 1024 * 1024), 2) + ' GB'; //format('%.2f GB', [byteSize / (1024 * 1024 * 1024)]);
+  else
+    Result := FloatToStr2(byteSize / (1024 * 1024 * 1024), 2) + ' GB'; //format('%.2f GB', [byteSize / (1024 * 1024 * 1024)]);
 end;
 
 {-------------------------------------------------------------------------------
@@ -175,7 +177,6 @@ begin
   szFilePath[n + 1] := #0;
   Result := szFilePath;                 //此处理,可让DLL调用中不会出错
 end;
-
 
 procedure MousePosClick(x, y: Integer);
 var
@@ -224,7 +225,8 @@ begin
       Result := '';
       Exit;
     end;
-  end else
+  end
+  else
     Index := 1;
 
   Result := Copy(_Str, Index + Length(_Start), MaxInt);
@@ -250,7 +252,8 @@ begin
       _LastStr := _Str;
       Exit;
     end;
-  end else
+  end
+  else
     Index := 1;
 
   _LastStr := Copy(_Str, Index + Length(_Start), MaxInt);
@@ -262,7 +265,6 @@ begin
   Result := Copy(_LastStr, 1, Index - 1);
   _LastStr := Copy(_LastStr, Index + Length(_End), MaxInt);
 end;
-
 
 function SplitStrArr(const Separators, sContent: string; var StrArr: TStrArr): Integer;
 var
@@ -290,7 +292,8 @@ var
 begin
   Result := 0;
   for i := 1 to Length(Str) do
-    if c = Str[i] then begin
+    if c = Str[i] then
+    begin
       Result := i;
       exit
     end;
@@ -322,7 +325,8 @@ var
 begin
   Result := false;
   if RegOpenKey(HKEY_LOCAL_MACHINE, Key, hk) = ERROR_SUCCESS then
-    if RegDeleteValue(hk, Vname) = ERROR_SUCCESS then Result := True;
+    if RegDeleteValue(hk, Vname) = ERROR_SUCCESS then
+      Result := True;
   RegCloseKey(hk);
 end;
 
@@ -335,7 +339,8 @@ begin
   Result := '';
   dwSize := 256;
   if RegOpenKey(HKEY_LOCAL_MACHINE, Key, hk) = 0 then
-    if RegQueryValueEx(hk, Vname, nil, nil, @S, @dwSize) = 0 then Result := S;
+    if RegQueryValueEx(hk, Vname, nil, nil, @S, @dwSize) = 0 then
+      Result := S;
   RegCloseKey(hk);
 end;
 
@@ -347,7 +352,8 @@ begin
   Result := 3;
   dwSize := 256;
   if RegOpenKey(HKEY_LOCAL_MACHINE, Key, hk) = 0 then
-    if RegQueryValueEx(hk, Vname, nil, nil, @S, @dwSize) = 0 then Result := S;
+    if RegQueryValueEx(hk, Vname, nil, nil, @S, @dwSize) = 0 then
+      Result := S;
   RegCloseKey(hk);
 end;
 
@@ -359,7 +365,8 @@ begin
   Result := false;
   D := REG_CREATED_NEW_KEY;
   if RegCreateKeyEx(HKEY_LOCAL_MACHINE, Key, 0, nil, 0, KEY_ALL_ACCESS, nil, hk, @D) = 0 then
-    if RegSetValueEx(hk, Vname, 0, REG_SZ, Value, Length(Value)) = 0 then Result := True;
+    if RegSetValueEx(hk, Vname, 0, REG_SZ, Value, Length(Value)) = 0 then
+      Result := True;
   RegCloseKey(hk);
 end;
 
@@ -371,18 +378,18 @@ begin
   Result := false;
   D := REG_CREATED_NEW_KEY;
   if RegCreateKeyEx(HKEY_LOCAL_MACHINE, Key, 0, nil, 0, KEY_ALL_ACCESS, nil, hk, @D) = 0 then
-    if RegSetValueEx(hk, Vname, 0, REG_DWORD, @Value, SizeOf(Value)) = 0 then Result := True;
+    if RegSetValueEx(hk, Vname, 0, REG_DWORD, @Value, SizeOf(Value)) = 0 then
+      Result := True;
   RegCloseKey(hk);
 end;
-
-
 
 function CopyFileAndDir(const source, dest: string): boolean;
 var
   fo                : TSHFILEOPSTRUCT;
 begin
   FillChar(fo, SizeOf(fo), 0);
-  with fo do begin
+  with fo do
+  begin
     Wnd := 0;
     wFunc := FO_Copy;
     pFrom := PAnsiChar(source + #0);
@@ -397,7 +404,8 @@ var
   fo                : TSHFILEOPSTRUCT;
 begin
   FillChar(fo, SizeOf(fo), 0);
-  with fo do begin
+  with fo do
+  begin
     Wnd := 0;
     wFunc := FO_DELETE;
     pFrom := PAnsiChar(source + #0);
@@ -406,7 +414,6 @@ begin
   end;
   Result := (SHFileOperation(fo) = 0);
 end;
-
 
 function WaitForExec(const CommLine: string; const Time, cmdShow: Cardinal): Cardinal; //创建进程并等待返回PID
 var
@@ -432,15 +439,18 @@ var
 begin
   Result := false;
   HOldDesk := GetThreadDesktop(GetCurrentThreadId);
-  if (not GetUserObjectInformation(HNewDesk, UOI_NAME, @sName[0], 256, dwDummy)) then begin
+  if (not GetUserObjectInformation(HNewDesk, UOI_NAME, @sName[0], 256, dwDummy)) then
+  begin
     //OutputDebugString('GetUserObjectInformation Failed.');
     exit;
   end;
-  if (not SetThreadDesktop(HNewDesk)) then begin
+  if (not SetThreadDesktop(HNewDesk)) then
+  begin
     //OutputDebugString('SetThreadDesktop Failed.');
     exit;
   end;
-  if (not CloseDesktop(HOldDesk)) then begin
+  if (not CloseDesktop(HOldDesk)) then
+  begin
     //OutputDebugString('CloseDesktop Failed.');
     exit;
   end;
@@ -464,7 +474,8 @@ begin
       DESKTOP_ENUMERATE or DESKTOP_HOOKCONTROL or
       DESKTOP_WRITEOBJECTS or DESKTOP_READOBJECTS or
       DESKTOP_SWITCHDESKTOP or GENERIC_WRITE);
-  if (HDesktop = 0) then begin
+  if (HDesktop = 0) then
+  begin
     //OutputDebugString(PAnsiChar('Get Desktop Failed: ' + IntToStr(GetLastError)));
     exit;
   end;
@@ -487,18 +498,21 @@ begin
     DESKTOP_ENUMERATE or DESKTOP_HOOKCONTROL or
     DESKTOP_WRITEOBJECTS or DESKTOP_READOBJECTS or
     DESKTOP_SWITCHDESKTOP);
-  if (HInpDesk = 0) then begin
+  if (HInpDesk = 0) then
+  begin
     //OutputDebugString('OpenInputDesktop Failed.');
     //dwError := GetLastError;
     //Result := (dwError = 170);
     exit;
   end;
-  if (not GetUserObjectInformation(HThdDesk, UOI_NAME, @sThdName[0], 256, dwDummy)) then begin
+  if (not GetUserObjectInformation(HThdDesk, UOI_NAME, @sThdName[0], 256, dwDummy)) then
+  begin
     //OutputDebugString('GetUserObjectInformation HThdDesk Failed.');
     CloseDesktop(HInpDesk);
     exit;
   end;
-  if (not GetUserObjectInformation(HInpDesk, UOI_NAME, @sInpName[0], 256, dwDummy)) then begin
+  if (not GetUserObjectInformation(HInpDesk, UOI_NAME, @sInpName[0], 256, dwDummy)) then
+  begin
     //OutputDebugString('GetUserObjectInformation HInpDesk Failed.');
     CloseDesktop(HInpDesk);
     exit;
@@ -506,7 +520,6 @@ begin
   CloseDesktop(HInpDesk);
   Result := (lstrcmp(sThdName, sInpName) = 0);
 end;
-
 
 {
 转义序列 字符
@@ -571,7 +584,8 @@ function GetTickCountUSec;              //比 GetTickCount精度高25~30毫秒
 var
   lpPerformanceCount: Int64;
 begin
-  if Frequency = 0 then begin
+  if Frequency = 0 then
+  begin
     QueryPerformanceFrequency(Frequency); //WINDOWS API 返回计数频率(Intel86:1193180)(获得系统的高性能频率计数器在一秒内的震动次数)
     Frequency := Frequency div 1000000; //一微秒内振动次数
   end;
@@ -581,8 +595,10 @@ end;
 
 function DiffTickCount;                 //计算活动时间差
 begin
-  if tNew >= tOld then Result := tNew - tOld
-  else Result := DWORD($FFFFFFFF) - tOld + tNew;
+  if tNew >= tOld then
+    Result := tNew - tOld
+  else
+    Result := DWORD($FFFFFFFF) - tOld + tNew;
 end;
 
 function MSecondToTimeStr;
@@ -594,10 +610,14 @@ begin
   Hour := ms div (1000 * 60 * 60);
   Day := ms div (1000 * 60 * 60 * 24);
   Result := '';
-  if Day > 0 then Result := Result + IntToStr(Day) + '天';
-  if Hour > 0 then Result := Result + IntToStr(Hour) + '时';
-  if Min > 0 then Result := Result + IntToStr(Min) + '分';
-  if Sec > 0 then Result := Result + IntToStr(Sec) + '秒';
+  if Day > 0 then
+    Result := Result + IntToStr(Day) + '天';
+  if Hour > 0 then
+    Result := Result + IntToStr(Hour) + '时';
+  if Min > 0 then
+    Result := Result + IntToStr(Min) + '分';
+  if Sec > 0 then
+    Result := Result + IntToStr(Sec) + '秒';
 end;
 
 end.

@@ -34,14 +34,6 @@ type
     CMD_HELLO_STREAMING                 { retransmitted hello during streaming mode }
     );
 
-  { Sender says he's up. This is not in the enum with the others,
-   * because of some endianness Snafu in early versions. However,since
-   * 2005-12-23, new receivers now understand a CMD_HELLO_NEW which is
-   * in sequence. Once enough of those are out in the field, we'll send
-   * CMD_HELLO_NEW by default, and then phase out the old variant. }
-  { Tried to remove this on 2009-08-30, but noticed that receiver was printing
-   * "unexpected opcode" on retransmitted hello }
-
 type
   TOk = packed record
     opCode: Word;
@@ -61,7 +53,8 @@ type
   TConnectReq = packed record
     opCode: Word;
     reserved: SmallInt;
-    capabilities: Integer;
+    dmcMode: Word;
+    capabilities: Word;
     rcvbuf: DWORD_PTR;
   end;
 
@@ -91,18 +84,20 @@ type
   TConnectReply = packed record
     opCode: Word;
     reserved: SmallInt;
+    dmcMode: Word;
+    capabilities: Word;
     clNr: Integer;
     blockSize: Integer;
-    capabilities: Integer;
     mcastAddr: array[0..15] of Byte;    { provide enough place for IPV6 }
   end;
 
   THello = packed record
     opCode: Word;
     reserved: SmallInt;
-    capabilities: Integer;
-    mcastAddr: array[0..15] of Byte;    { provide enough place for IPV6 }
+    dmcMode: Word;
+    capabilities: Word;
     blockSize: SmallInt;
+    mcastAddr: array[0..15] of Byte;    { provide enough place for IPV6 }
   end;
 
   TServerControlMsg = packed record
@@ -112,6 +107,7 @@ type
       2: (hello: THello);
       3: (connectReply: TConnectReply);
   end;
+  PServerControlMsg = ^TServerControlMsg;
 
   TDataBlock = packed record
     opCode: Word;
@@ -139,7 +135,7 @@ type
     rxmit: Integer;
   end;
 
-  TServerDataMsg = packed record        //16 byte
+  TServerDataMsg = packed record
     case Integer of
       0: (opCode: Word);
       1: (reqack: TReqack);
@@ -147,30 +143,27 @@ type
       3: (fecBlock: TFecBlock);
   end;
 
-  { ============================================
-   * Capabilities
-   }
+  { dmc mode }
 const
+  { reliable mode }
+  DMC_FIXED         = $0000;            //fixed receivers (固定接收者)
+  DMC_STREAM        = $0001;            //stream mode
+  { unreliable mode(no receiver reply) }
+  DMC_ASYNC         = $0010;            //no reply
+  DMC_FEC           = $0020;            //forward-error-correction
+
+  { capabilities }
+const
+
   { Does the receiver support the new CMD_DATA command, which carries
    * capabilities mask?
-   * "new generation" receiver:
+   * receiver:
    *   - capabilities word included in hello/connectReq commands
    *   - receiver multicast capable
    *   - receiver can receive ASYNC and SN
    }
-   { 新一代(一般正常模式) }
+   { "new generation" 新一代 }
   CAP_NEW_GEN       = $0001;
-
-  { Use multicast instead of Broadcast for data }
-  { CAP_MULTICAST 0x0002}
-
-{$IFDEF BB_FEATURE_UDPCAST_FEC}
-  { Forward error correction }
-  CAP_FEC           = $0004;
-{$ENDIF}
-
-  { This transmission is asynchronous (no receiver reply) }
-  CAP_ASYNC         = $0020;
 
   { Sender currently supports CAPABILITIES and MULTICAST }
   SENDER_CAPABILITIES = CAP_NEW_GEN;

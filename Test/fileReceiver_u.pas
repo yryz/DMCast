@@ -4,12 +4,11 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, WinSock,
-  FuncLib, Config_u, IStats_u;
+  FuncLib, Config_u, IStats_u, HouLog_u;
 
 type
   TReceiverStats = class(TInterfacedObject, IReceiverStats)
   private
-    FConfig: PRecvConfig;
     FStartTime: DWORD;                  //传输开始时间
     FStatPeriod: DWORD;                 //状态显示周期
     FPeriodStart: DWORD;                //周期开始节拍
@@ -20,7 +19,7 @@ type
   protected
     procedure DoDisplay();
   public
-    constructor Create(config: PRecvConfig; statPeriod: Integer);
+    constructor Create(statPeriod: Integer);
     destructor Destroy; override;
 
     procedure TransStateChange(TransState: TTransState);
@@ -43,7 +42,7 @@ type
 
 function RunReceiver(const FileName: string): Boolean;
 implementation
-//{$DEFINE IS_IMPORT_MODULE}
+{$DEFINE IS_IMPORT_MODULE}
 {$IFNDEF IS_IMPORT_MODULE}
 uses
   DMCReceiver_u;
@@ -52,7 +51,7 @@ uses
 const
   DMC_RECEIVER_DLL  = 'DMCReceiver.dll';
 
-function DMCConfigFill(var config: TNetConfig): Boolean;
+procedure DMCConfigFill(var config: TRecvConfig); stdcall;
   external DMC_RECEIVER_DLL;
 
 function DMCNegoCreate(config: PNetConfig; TransStats: IReceiverStats;
@@ -74,9 +73,8 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 { TReceiverStats }
 
-constructor TReceiverStats.Create(config: PRecvConfig; statPeriod: Integer);
+constructor TReceiverStats.Create(statPeriod: Integer);
 begin
-  FConfig := config;
   FStatPeriod := statPeriod;
 end;
 
@@ -91,35 +89,35 @@ begin
   case TransState of
     tsNego:
       begin
-{$IFDEF CONSOLE}
-        Writeln('Start Negotiations...');
+{$IFDEF EN_LOG}
+        OutLog('Start Negotiations...');
 {$ENDIF}
       end;
     tsTransing:
       begin
         FStartTime := GetTickCount;
         FPeriodStart := FStartTime;
-{$IFDEF CONSOLE}
-        Writeln('Start Trans..');
+{$IFDEF EN_LOG}
+        OutLog('Start Trans..');
 {$ENDIF}
       end;
     tsComplete:
       begin
         DoDisplay;
-{$IFDEF CONSOLE}
-        Writeln('Transfer Completed.');
+{$IFDEF EN_LOG}
+        OutLog('Transfer Completed.');
 {$ENDIF}
       end;
     tsExcept:
       begin
-{$IFDEF CONSOLE}
-        Writeln('Transfer Except!');
+{$IFDEF EN_LOG}
+        OutLog('Transfer Except!');
 {$ENDIF}
       end;
     tsStop:
       begin
-{$IFDEF CONSOLE}
-        Writeln('Stop.');
+{$IFDEF EN_LOG}
+        OutLog('Stop.');
 {$ENDIF}
       end;
   end;
@@ -166,7 +164,10 @@ begin
 
   Write(Format('bytes=%d(%s)'#9'speed=%s/s'#9#9,
     [FTotalBytes, GetSizeKMG(FTotalBytes), GetSizeKMG(Trunc(bw))]));
+  if FTransState <> tsTransing then
+    WriteLn('');
 {$ENDIF}
+
   FPeriodStart := GetTickCount;
   FLastPosBytes := FTotalBytes;
 end;
@@ -227,13 +228,13 @@ var
 begin
   //默认配置
   DMCConfigFill(config);
+  //config.dmcMode := dmcStreamMode;
 
-{$IFDEF CONSOLE}
-  WriteLn('File Save to ', fileName);
-  //Writeln(SizeOf(config));
+{$IFDEF EN_LOG}
+  OutLog('File Save to ' + fileName);
 {$ENDIF}
 
-  ReceiverStats := TReceiverStats.Create(@config, DEFLT_STAT_PERIOD);
+  ReceiverStats := TReceiverStats.Create(DEFLT_STAT_PERIOD);
   Nego := DMCNegoCreate(@config, ReceiverStats, Fifo);
 
   if Assigned(Fifo) then
@@ -245,6 +246,17 @@ begin
   FileWriter.WaitFor;
   FileWriter.Free;
 end;
+
+{$IFDEF CONSOLE}
+
+procedure MyOutLog2(level: TLogLevel; s: string);
+begin
+  Writeln(DMC_MSG_TYPE[level], ': ', s);
+end;
+
+initialization
+  OutLog2 := MyOutLog2;
+{$ENDIF}
 
 end.
 

@@ -786,9 +786,12 @@ end;
 
 procedure TUDPReceiverSocket.SetDataAddrFromMsg(const src);
 begin
-  move(src, FDataAddr.sin_addr, SizeOf(TInAddr));
-  if IsMCastAddress(@FDataAddr) then    //加入组播
-    MCastOption(FNetIf.addr, FDataAddr.sin_addr, True);
+  if TInAddr(src).S_addr <> FDataAddr.sin_addr.S_addr then
+  begin
+    move(src, FDataAddr.sin_addr, SizeOf(TInAddr));
+    if IsMCastAddress(@FDataAddr) then  //加入组播
+      MCastOption(FNetIf.addr, FDataAddr.sin_addr, True);
+  end;
 end;
 
 procedure _Init_;

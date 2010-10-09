@@ -2,7 +2,7 @@ program DMCSender;
 
 uses
   Forms,
-  frmCastFile_u in 'frmCastFile_u.pas' {frmUdpcast};
+  frmCastFile_u in 'frmCastFile_u.pas' {frmCastFile};
 
 {$R *.res}
 begin

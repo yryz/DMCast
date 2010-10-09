@@ -30,7 +30,7 @@ type
   IReceiverStats = interface(ITransStats)
   end;
 
-  { Sender 成员变更 }
+  { Sender 成员统计 }
   IPartsStats = interface
     ['{20100930-1049-0000-0000-000000000001}']
     function Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;

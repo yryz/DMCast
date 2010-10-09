@@ -2,14 +2,13 @@ unit DMCSender_u;
 
 interface
 uses
-  Windows, Messages, SysUtils, Classes,
+  Windows, Messages, SysUtils, MyClasses,
   FuncLib, Config_u, Protoc_u, IStats_u,
   Negotiate_u, Fifo_u, SendData_u, HouLog_u;
 
 type
   TSenderThread = class(TThread)
   private
-    FConfig: PSendConfig;
     FStats: ISenderStats;
     FNego: TNegotiate;
 
@@ -30,7 +29,7 @@ type
   //API接口
 
   //填充默认配置
-procedure DMCConfigFill(var config: TSendConfig);
+procedure DMCConfigFill(var config: TSendConfig); stdcall;
 //开始会话  TransStats,PartsStats 可以为nil
 function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
   PartsStats: IPartsStats; var lpFifo: Pointer): Pointer; stdcall;
@@ -52,7 +51,7 @@ begin
   begin
     with net do
     begin
-      ifName := nil;           //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil(INADDR_ANY)
+      ifName := nil;                    //eth0 or 192.168.0.1 or 00-24-1D-99-64-D5 or nil(INADDR_ANY)
       localPort := 9080;                //9001
       remotePort := 8090;               //9000
 
@@ -63,12 +62,13 @@ begin
     end;
 
     flags := [];
+    dmcMode := dmcFixedMode;
     blockSize := 1456;                  // 这个值在一些情况下（如家用无线），设置大点效果会好些如10K
 
     min_slice_size := Protoc_u.MIN_SLICE_SIZE;
     max_slice_size := Protoc_u.MAX_SLICE_SIZE;
 
-    rexmit_hello_interval := 2000;      //retransmit hello message
+    rexmit_hello_interval := 1000;      //retransmit hello message
     retriesUntilDrop := 30;
     rehelloOffset := 50;
   end;
@@ -168,7 +168,6 @@ end;
 constructor TSenderThread.Create(config: PSendConfig; TransStats: ISenderStats;
   PartsStats: IPartsStats);
 begin
-  FConfig := config;
   FIo := TFifo.Create(config^.blockSize);
   FStats := TransStats;
   FNego := TNegotiate.Create(config, TransStats, PartsStats);

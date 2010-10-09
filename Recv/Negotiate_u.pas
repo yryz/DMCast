@@ -11,15 +11,16 @@ uses
 type
   TNegotiate = class(TObject)
   private
-    FConfig: PRecvConfig;
+    FConfig: TRecvConfig;
     FStats: IReceiverStats;
     FUSocket: TUDPReceiverSocket;
 
     FTransState: TTransState;
     procedure SetTransState(const Value: TTransState);
   protected
+    FDmcMode: Word;                     //工作模式
     FClientID: Integer;                 //会话ID
-    FCapabilities: Integer;             //功能特征
+    FCapabilities: Word;                //功能特征
   private
     //请求会话
     function SendConnectReq(): Integer;
@@ -40,8 +41,9 @@ type
     //会话状态
     property TransState: TTransState read FTransState write SetTransState;
 
+    property DmcMode: Word read FDmcMode write FDmcMode;
     property ClientID: Integer read FClientID;
-    property Config: PRecvConfig read FConfig;
+    property Config: TRecvConfig read FConfig;
     property USocket: TUDPReceiverSocket read FUSocket;
     property Stats: IReceiverStats read FStats;
   end;
@@ -52,9 +54,28 @@ implementation
 
 constructor TNegotiate.Create(config: PRecvConfig; Stats: IReceiverStats);
 begin
-  FConfig := config;
+  Move(config^, FConfig, SizeOf(FConfig));
+
   FStats := Stats;
   FClientID := -1;
+
+  case config^.dmcMode of
+    dmcFixedMode: FDmcMode := DMC_FIXED;
+    dmcStreamMode: FDmcMode := DMC_STREAM;
+    dmcAsyncMode: FDmcMode := DMC_ASYNC;
+    dmcFecMode: FDmcMode := DMC_FEC;
+  end;
+
+  { make the socket and print banner }
+  FUSocket := TUDPReceiverSocket.Create(@FConfig.net);
+
+{$IFDEF EN_LOG}
+  OutLog(Format('UDP receiver at %s:%d on %s',
+    [inet_ntoa(FUSocket.NetIf.addr), FConfig.net.localPort, FUSocket.NetIf.name]));
+  OutLog(Format('Connect to %s:%d',
+    [inet_ntoa(FUSocket.CtrlAddr.sin_addr), FConfig.net.remotePort]));
+{$ENDIF}
+
 end;
 
 destructor TNegotiate.Destroy;
@@ -68,16 +89,12 @@ function TNegotiate.SendConnectReq(): Integer;
 var
   conReq            : TConnectReq;
 begin
-  if (dmcPassiveMode in FConfig^.flags) then
-    Result := 0
-  else
-  begin
-    conReq.opCode := htons(Word(CMD_CONNECT_REQ));
-    conReq.reserved := 0;
-    conReq.capabilities := htonl(RECEIVER_CAPABILITIES);
-    conReq.rcvbuf := htonl(FUSocket.RecvBufSize);
-    Result := FUSocket.SendCtrlMsg(conReq, SizeOf(conReq));
-  end;
+  conReq.opCode := htons(Word(CMD_CONNECT_REQ));
+  conReq.reserved := 0;
+  conReq.dmcMode := htons(FDmcMode);
+  conReq.capabilities := htons(RECEIVER_CAPABILITIES);
+  conReq.rcvbuf := htonl(FUSocket.RecvBufSize);
+  Result := FUSocket.SendCtrlMsg(conReq, SizeOf(conReq));
 end;
 
 function TNegotiate.SendGo(): Integer;
@@ -101,59 +118,58 @@ end;
 function TNegotiate.StartNegotiate(): Boolean;
 var
   msgLen            : Integer;
-  ctrlMsg           : TServerControlMsg;
+  pMsg              : PServerControlMsg;
+  msgBuf            : array[0..SizeOf(TServerControlMsg) + MAX_BLOCK_SIZE - 1] of Byte; //Fix SOCKET WSAEMSGSIZE  EERR (10040);
+  connectReqSent    : Boolean;
 begin
   Result := False;
   FTransState := tsNego;
+  connectReqSent := False;
 
-  { make the socket and print banner }
-  FUSocket := TUDPReceiverSocket.Create(@FConfig^.net);
-
-{$IFDEF CONSOLE}
-  //if disk_config^.pipeName = nil then Write('Compressed ');
-  Write('UDP receiver at ');
-  Write(inet_ntoa(FUSocket.NetIf.addr), ':', FConfig.net.localPort);
-  WriteLn(' on ', FUSocket.NetIf.name);
-  WriteLn('Connect to ', inet_ntoa(FUSocket.CtrlAddr.sin_addr),
-    ':', FConfig.net.remotePort);
-{$ENDIF}
-
+  pMsg := @msgBuf;
   while True do
   begin
-    if not Result then
+    if not LongBool(FDmcMode and (DMC_ASYNC or DMC_FEC))
+      and not connectReqSent then
+    begin
       if SendConnectReq() < 0 then
         Break;
+      connectReqSent := True;
+    end;
 
     if FUSocket.SelectSocks(@FUSocket.Socket, 1, 1.5, True) <= 0 then
       Continue;
 
-    msgLen := FUSocket.RecvCtrlMsg(ctrlMsg, SizeOf(ctrlMsg),
+    msgLen := FUSocket.RecvCtrlMsg(msgBuf, SizeOf(msgBuf),
       PSockAddrIn(@FUSocket.CtrlAddr)^);
 
     if (msgLen < 0) then
     begin
-{$IFDEF CONSOLE}
-      WriteLn('problem getting data from client.errorno:', GetLastError);
+{$IFDEF DMC_MSG_ERROR}
+      OutLog(Format('problem getting data from client.errorno:%d', [GetLastError]));
 {$ENDIF}
       Break;                            { don't panic if we get weird messages }
     end
     else if (msgLen = 0) then
       Continue;
 
-    case TOpCode(ntohs(ctrlMsg.opCode)) of
+    case TOpCode(ntohs(pMsg^.opCode)) of
       CMD_CONNECT_REPLY:
         begin
-          FClientID := ntohl(ctrlMsg.connectReply.clNr);
-          FConfig^.blockSize := ntohl(ctrlMsg.connectReply.blockSize);
-          FCapabilities := ntohl(ctrlMsg.connectReply.capabilities);
-{$IFDEF CONSOLE}
-          WriteLn(Format('received message, cap=%-.8x', [FCapabilities]));
+          FClientID := ntohl(pMsg^.connectReply.clNr);
+          FDmcMode := ntohs(pMsg^.hello.dmcMode);
+          FCapabilities := ntohs(pMsg^.connectReply.capabilities);
+          FConfig.blockSize := ntohl(pMsg^.connectReply.blockSize);
+{$IFDEF EN_LOG}
+          OutLog(Format('received message, cap=%-.8x', [FCapabilities]));
 {$ENDIF}
           if LongBool(FCapabilities and CAP_NEW_GEN) then //支持组播
-            FUSocket.SetDataAddrFromMsg(ctrlMsg.connectReply.mcastAddr);
+            FUSocket.SetDataAddrFromMsg(pMsg^.connectReply.mcastAddr);
 
           if FClientID >= 0 then
-            Result := True
+          begin
+            Result := True;
+          end
           else
           begin
 {$IFDEF DMC_FATAL_ON}
@@ -162,33 +178,33 @@ begin
           end;
           Break;
         end;
-      CMD_HELLO_STREAMING: ;
-      CMD_HELLO_NEW: ;
-      CMD_HELLO:
+      CMD_HELLO_STREAMING,
+        CMD_HELLO_NEW,
+        CMD_HELLO:
         begin
-          FCapabilities := ntohl(ctrlMsg.hello.capabilities);
-          if TOpCode(ntohs(ctrlMsg.opCode)) = CMD_HELLO_STREAMING then
-            FConfig^.flags := FConfig^.flags + [dmcStreamMode];
+          connectReqSent := False;
+
+          FDmcMode := ntohs(pMsg^.hello.dmcMode);
+          FCapabilities := ntohs(pMsg^.hello.capabilities);
 
           if LongBool(FCapabilities and CAP_NEW_GEN) then
           begin
-            FConfig^.blockSize := ntohs(ctrlMsg.hello.blockSize);
-            FUSocket.SetDataAddrFromMsg(ctrlMsg.hello.mcastAddr);
-
-            if LongBool(FCapabilities and CAP_ASYNC) then
-              FConfig^.flags := FConfig^.flags + [dmcPassiveMode];
-            if dmcPassiveMode in FConfig^.flags then
-              Break;
+            FConfig.blockSize := ntohs(pMsg^.hello.blockSize);
+            FUSocket.SetDataAddrFromMsg(pMsg^.hello.mcastAddr);
           end;
-          continue;
+
+          if LongBool(FDmcMode and (DMC_ASYNC or DMC_FEC)) then
+            Break
+          else
+            Continue;
         end;
-      CMD_CONNECT_REQ: ;
-      CMD_DATA: ;
-      CMD_FEC: continue;
+      CMD_CONNECT_REQ,
+        CMD_DATA,
+        CMD_FEC: Continue;
 {$IFDEF DMC_WARN_ON}
     else
       OutLog2(llWarn, Format('Unexpected command %-.4x',
-        [ntohs(ctrlMsg.opCode)]));
+        [ntohs(pMsg^.opCode)]));
 {$ENDIF}
     end;
   end;                                  //end while
@@ -204,7 +220,13 @@ procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
   if Assigned(FStats) then
-    FStats.TransStateChange(Value);
+    try
+      FStats.TransStateChange(Value);
+    except
+{$IFDEF DMC_ERROR_ON}
+      OutLog2(llError, 'FStats.TransStateChange except!');
+{$ENDIF}
+    end;
 end;
 
 end.

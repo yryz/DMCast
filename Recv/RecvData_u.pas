@@ -4,7 +4,7 @@ unit RecvData_u;
 
 interface
 uses
-  Windows, Sysutils, Classes, WinSock, Func_u,
+  Windows, Sysutils, MyClasses, WinSock, Func_u,
   Config_u, Protoc_u, IStats_u, Negotiate_u,
   Produconsum_u, Fifo_u, SockLib_u, HouLog_u;
 
@@ -85,7 +85,7 @@ type
     class function SendOk(USocket: TUDPReceiverSocket; sliceNo: Integer): Integer;
     function SendRetransmit(rxmit: Integer): Integer;
     procedure FakeComplete();
-  published
+  public
     property Index: Integer read FIndex;
     property State: TSliceState read FState write FState;
     property SliceNo: Integer read FSliceNo;
@@ -104,8 +104,8 @@ type
     FFecThread: THandle;
     FFecDataPC: TProduceConsum;
 {$ENDIF}
-    //USE FEC
-    FNextBlock: DWORD_PTR;
+    //USE StreamMode Fisrt Slice  or  FEC
+    FNextBlock: Pointer;
     //NOT FLAG_STREAMING
     FCurrentSlice: TSlice;
     //Completely received slices
@@ -123,8 +123,8 @@ type
 
     function MakeSlice(sliceNo: Integer): TSlice; //准备数据片
     function FindSlice(sliceNo: Integer): TSlice;
-  published
-    property NextBlock: DWORD_PTR read FNextBlock;
+  public
+    property NextBlock: Pointer read FNextBlock;
     property CurrentSlice: TSlice read FCurrentSlice write FCurrentSlice;
     property ReceivedSliceNo: Integer read FReceivedSliceNo write FReceivedSliceNo;
     property FreeSlicesPC: TProduceConsum read FFreeSlicesPC;
@@ -172,7 +172,7 @@ type
   //
   //  protected
   //    procedure Execute; override;        //循环等待读取数据到发送队列
-  //  published
+  //  public
   //
   //  end;
 
@@ -201,12 +201,13 @@ constructor TSlice.Create;
 begin
   FIndex := Index;
   FState := SLICE_FREE;
+
   FDp := Dp;
   FFifo := Fifo;
   FNego := Nego;
-  FConfig := Nego.Config;
-  FUSocket := Nego.USocket;
   FStats := Nego.Stats;
+  FConfig := @Nego.Config;
+  FUSocket := Nego.USocket;
 end;
 
 destructor TSlice.Destroy;
@@ -228,12 +229,13 @@ begin
   begin
     if not FDp.CurrentSlice.BytesKnown then
       raise Exception.Create('Previous slice size not known!');
-    if dmcIgnoreLostData in FConfig^.flags then
+    //IgnoreLostData
+    if LongBool(FNego.DmcMode and (DMC_ASYNC or DMC_FEC)) then
       FBytes := FDp.CurrentSlice.Bytes;
   end;
 
   //只有流模式可能准备多片交错
-  if not (dmcStreamMode in FConfig^.flags)
+  if (FNego.DmcMode <> DMC_STREAM)
     and (FDp.FCurrentSlice <> nil) then
     if FDp.CurrentSlice.SliceNo <> sliceNo - 1 then
       raise Exception.CreateFmt('Slice no mismatch %d <-> %d',
@@ -273,7 +275,7 @@ begin
     FBytesKnown := True;
     FNrBlocks := (FBytes + FConfig^.blockSize - 1) div FConfig^.blockSize;
 
-    if not (dmcStreamMode in FConfig^.flags) then
+    if (FNego.DmcMode <> DMC_STREAM) then
     begin
       {* In streaming mode, do not reserve space as soon as first
        * block of slice received, but only when slice complete.
@@ -393,7 +395,7 @@ begin
     Result := 1;
     FDp.ReceivedSliceNo := FSliceNo;
 
-    if dmcStreamMode in FConfig^.flags then
+    if FNego.DmcMode = DMC_STREAM then
     begin
       {* If we are in streaming mode, the storage space for the first
        * entire slice is only consumed once it is complete. This
@@ -407,7 +409,7 @@ begin
        * is complete, such as during retransmissions)
        *}
       FFifo.FreeMemPC.Consumed(FBytes);
-      FConfig^.flags := FConfig^.flags - [dmcStreamMode];
+      FNego.DmcMode := DMC_FIXED;       //进入固定模式
     end;
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
@@ -536,7 +538,7 @@ var
 begin
   FFifo := Fifo;
   FNego := Nego;
-  FConfig := Nego.Config;
+  FConfig := @Nego.Config;
 
   FReceivedSliceNo := -1;
   FFreeSlicesPC := TProduceConsum.Create(NR_SLICES, 'free slices');
@@ -544,8 +546,10 @@ begin
   for i := 0 to NR_SLICES - 1 do
     FSlices[i] := TSlice.Create(i, FNego, Fifo, Self);
 
-  if not (dmcStreamMode in FConfig^.flags) then
+  if FNego.DmcMode <> DMC_STREAM then
     MakeSlice(0);                       //准备 CurrentSlice
+
+  FNextBlock := Fifo.GetDataBuffer(0);
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   if LongBool(FConfig^.flags and FLAG_FEC) then
@@ -622,7 +626,10 @@ begin
     while (Result.SliceNo <> sliceNo) do
     begin
       if (Result.State = SLICE_FREE) then
+      begin
+        Result := nil;
         Exit;
+      end;
 
       Dec(pos);                         //得到之前的片
       if pos < 0 then
@@ -630,10 +637,10 @@ begin
       Result := FSlices[pos];
     end;
   end
-  else
+  else                                  //新片？
   begin
-    if (dmcStreamMode in FConfig^.flags) and
-      (sliceNo <> FCurrentSlice.SliceNo) then
+    if (FNego.DmcMode = DMC_STREAM)
+      and (sliceNo <> FCurrentSlice.SliceNo) then
     begin
       FCurrentSlice := FSlices[0];
       assert(FCurrentSlice <> nil);
@@ -641,12 +648,13 @@ begin
       Result := FCurrentSlice;
       Exit;
     end;
+
     //片不连续？
     while (sliceNo > FReceivedSliceNo + 2)
       or (sliceNo <> FCurrentSlice.SliceNo + 1) do
     begin
       Slice := FindSlice(FReceivedSliceNo + 1);
-      if (dmcIgnoreLostData in FConfig^.flags) then
+      if LongBool(FNego.DmcMode and (DMC_ASYNC or DMC_FEC)) then //IgnoreLostData
       begin
         assert(Slice <> nil);
         assert(Slice.State <> SLICE_DONE);
@@ -753,7 +761,7 @@ procedure TReceiver.Init;
 begin
   FDp := Dp;
   FNego := Nego;
-  FConfig := Nego.Config;
+  FConfig := @Nego.Config;
   FUSocket := Nego.USocket;
 end;
 
@@ -804,9 +812,6 @@ var
 
   dataMsg           : TServerDataMsg;
   msg               : TNetMsg;
-  //pre-prepared messages
-  headIov           : TIOVec;
-  dataIov           : TIOVec;
   Slice             : TSlice;
 begin
   //setup messages
@@ -822,8 +827,8 @@ begin
       msg.data.base := FDp.CurrentSlice.GetBlockBase(
         FDp.CurrentSlice.FreePos);
     end
-    else                                //FEC
-      msg.data.base := Pointer(FDp.NextBlock);
+    else                                //StreamMode First Slice  or  FEC
+      msg.data.base := FDp.NextBlock;
 
     len := FUSocket.RecvDataMsg(msg);
 
@@ -840,7 +845,7 @@ begin
     case TOpCode(ntohs(dataMsg.opCode)) of
       CMD_DATA:
         begin
-          if FNego.TransState = tsNego then //接收到第一块数据
+          if FNego.TransState <> tsTransing then //接收到第一块数据
             FNego.TransState := tsTransing;
 
           Slice := FDp.FindSlice(ntohl(dataMsg.dataBlock.sliceNo));
@@ -871,9 +876,9 @@ begin
             ntohl(dataMsg.reqack.rxmit)) < 0 then
             Break;
         end;
-      CMD_HELLO_STREAMING: ;
-      CMD_HELLO_NEW: ;
-      CMD_HELLO: ;                      //retransmission of hello to find other participants ==> ignore
+      CMD_HELLO_STREAMING,
+        CMD_HELLO_NEW,
+        CMD_HELLO: ;                    //retransmission of hello to find other participants ==> ignore
 {$IFDEF DMC_WARN_ON}
     else
       OutLog2(llWarn, Format('Unexpected command %-.4x',

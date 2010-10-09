@@ -2,14 +2,13 @@ unit DMCReceiver_u;
 
 interface
 uses
-  Windows, Messages, SysUtils, Classes,
+  Windows, Messages, SysUtils, MyClasses,
   FuncLib, Config_u, Protoc_u, IStats_u,
   Negotiate_u, Fifo_u, RecvData_u, HouLog_u;
 
 type
   TReceiverThread = class(TThread)
   private
-    FConfig: PRecvConfig;
     FStats: IReceiverStats;
 
     FIo: TFifo;
@@ -30,7 +29,7 @@ type
   //API接口
 
   //填充默认配置
-function DMCConfigFill(var config: TRecvConfig): Boolean; stdcall;
+procedure DMCConfigFill(var config: TRecvConfig); stdcall;
 //开始会话  TransStats 可以为nil
 function DMCNegoCreate(config: PRecvConfig; TransStats: IReceiverStats;
   var lpFifo: Pointer): Pointer; stdcall;
@@ -45,9 +44,9 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 implementation
 
-function DMCConfigFill(var config: TRecvConfig): Boolean;
+procedure DMCConfigFill(var config: TRecvConfig);
 begin
-  //FillChar(config, SizeOf(config), 0);
+  FillChar(config, SizeOf(config), 0);
   with config do
   begin
     with net do
@@ -64,7 +63,7 @@ begin
       sockRecvBufSize := 256 * 1024;    //如果接收Recv者性能较差，建议设置足够的缓冲区，减少丢包
     end;
 
-    flags := [];
+    dmcMode := dmcFixedMode;
     blockSize := 1456;
   end;
 end;
@@ -145,7 +144,6 @@ end;
 
 constructor TReceiverThread.Create(config: PRecvConfig; TransStats: IReceiverStats);
 begin
-  FConfig := config;
   FIo := TFifo.Create(config^.blockSize);
   FStats := TransStats;
   FNego := TNegotiate.Create(config, TransStats);
@@ -177,6 +175,9 @@ begin
       FReceiver.Init(FNego, FDp);
 
       FReceiver.Execute;                //执行发送
+
+      if FNego.TransState <> tsComplete then
+        FIo.DataPC.MarkEnd;             //将缓冲区数据取出[信号]
     end;
   finally
     FNego.TransState := tsStop;

@@ -5,12 +5,12 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, XPMan, Buttons, ComCtrls, ExtCtrls, ImgList, WinSock,
-  FuncLib, Config_u, IStats_u, Spin;
+  FuncLib, Config_u, IStats_u, Spin, ShellAPI;
 
 type
   TSenderStats = class(TInterfacedObject, ISenderStats)
   private
-    FConfig: PSendConfig;
+    FBlockSize: Integer;
     FStartTime: DWORD;                  //传输开始时间
     FStatPeriod: DWORD;                 //状态显示周期
     FPeriodStart: DWORD;                //周期开始节拍
@@ -22,7 +22,7 @@ type
   protected
     procedure DoDisplay();
   public
-    constructor Create(config: PSendConfig; statPeriod: Integer);
+    constructor Create(blockSize: Integer; statPeriod: Integer);
     destructor Destroy; override;
 
     procedure TransStateChange(TransState: TTransState);
@@ -64,7 +64,6 @@ type
     XPManifest1: TXPManifest;
     stat1: TStatusBar;
     lvClient: TListView;
-    pb1: TProgressBar;
     Panel1: TPanel;
     Label1: TLabel;
     edtFile: TEdit;
@@ -90,12 +89,23 @@ type
     grp4: TGroupBox;
     lbl6: TLabel;
     seWaitReceivers: TSpinEdit;
+    chkLoopStart: TCheckBox;
+    chkStreamMode: TCheckBox;
+    seRetriesUntilDrop: TSpinEdit;
+    lbl7: TLabel;
+    lbl8: TLabel;
+    lbl9: TLabel;
+    seMaxWait: TSpinEdit;
+    lblFile: TLabel;
+    lblFileSize: TLabel;
+    pb1: TProgressBar;
 
     procedure btnStartClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
     procedure btnStopClick(Sender: TObject);
     procedure btnTransClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure lbl8Click(Sender: TObject);
   private
     FPartsStats: IPartsStats;
     FSenderStats: ISenderStats;
@@ -112,7 +122,6 @@ type
 var
   frmCastFile       : TfrmCastFile;
   dwThID            : DWORD;
-  g_Config          : TSendConfig;
   g_FileSize        : Int64;
 
 implementation
@@ -124,6 +133,9 @@ uses
 //API接口
 const
   DMC_SENDER_DLL    = 'DMCSender.dll';
+
+procedure DMCConfigFill(var config: TSendConfig); stdcall;
+  external DMC_SENDER_DLL;
 
 function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
   PartsStats: IPartsStats; var lpFifo: Pointer): Pointer; stdcall;
@@ -146,9 +158,9 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 { TSenderStats }
 
-constructor TSenderStats.Create(config: PSendConfig; statPeriod: Integer);
+constructor TSenderStats.Create(blockSize: Integer; statPeriod: Integer);
 begin
-  FConfig := config;
+  FBlockSize := blockSize;
   FStatPeriod := statPeriod;
 end;
 
@@ -224,8 +236,10 @@ begin
     tdiff := DiffTickCount(FPeriodStart, tickNow);
     if (tdiff < FStatPeriod) then
       Exit;
+    if tdiff = 0 then
+      tdiff := 1;
     //带宽统计
-    bw := (FTotalBytes - FLastPosBytes) / tdiff * 1000; // Byte/s
+    bw := (FTotalBytes - FLastPosBytes) * 1000 / tdiff; // Byte/s
   end
   else
   begin
@@ -233,11 +247,11 @@ begin
     if tdiff = 0 then
       tdiff := 1;
     //平均带宽统计
-    bw := FTotalBytes / tdiff * 1000;   // Byte/s
+    bw := FTotalBytes * 1000 / tdiff;   // Byte/s
   end;
 
   //重传块统计
-  blocks := (FTotalBytes + FConfig^.blockSize - 1) div FConfig^.blockSize;
+  blocks := (FTotalBytes + FBlockSize - 1) div FBlockSize;
   if blocks = 0 then
     percent := 0
   else
@@ -247,9 +261,8 @@ begin
   if g_FileSize > 0 then
     frmCastFile.pb1.Position := FTotalBytes * 100 div g_FileSize;
   frmCastFile.lblTransBytes.Caption := GetSizeKMG(FTotalBytes);
-  frmCastFile.lblSpeed.Caption := GetSizeKMG(Trunc(bw));
+  frmCastFile.lblSpeed.Caption := GetSizeKMG(Trunc(bw)) + '/s';
   frmCastFile.lblRexmit.Caption := Format('%d(%.2f%%)', [FNrRetrans, percent]);
-  //frmCastFile.lblSliceSize.Caption := IntToStr(FConfig^.sliceSize);
 
   FPeriodStart := GetTickCount;
   FLastPosBytes := FTotalBytes;
@@ -321,16 +334,16 @@ var
   lpBuf             : PByte;
   dwBytes           : DWORD;
 begin
-  while not Terminated do
-  begin
+  repeat
     dwBytes := 4096;
     lpBuf := DMCDataWriteWait(FFifo, dwBytes); //等待数据缓冲区可写
-    if (lpBuf = nil) or Terminated then
+    if (dwBytes = 0) or Terminated then
       Break;
 
     dwBytes := FFile.Read(lpBuf^, dwBytes);
     DMCDataWrited(FFifo, dwBytes);
-  end;
+
+  until Terminated or (dwBytes = 0);
 end;
 
 procedure TFileReader.Terminate;
@@ -343,6 +356,7 @@ end;
 procedure TfrmCastFile.btnStartClick(Sender: TObject);
 var
   fileName          : string;
+  config            : TSendConfig;
 begin
   fileName := edtFile.Text;
   if FileExists(fileName) then
@@ -353,24 +367,29 @@ begin
     btnStart.Enabled := False;
 
     g_FileSize := GetFileSize(PAnsiChar(fileName));
-    pb1.Hint := '总数据 ' + GetSizeKMG(g_FileSize);
+    lblFileSize.Caption := GetSizeKMG(g_FileSize);
+    pb1.Hint := '总数据 ' + lblFileSize.Caption;
 
     //默认配置
-    DMCConfigFill(g_Config);
-    //g_Config.flags := [dmcNoPointToPoint];
-    //g_Config.net.mcastRdv:='239.0.0.1';
+    DMCConfigFill(config);
+    if chkStreamMode.Checked then
+      config.dmcMode := dmcStreamMode;
+    //config.net.mcastRdv:='239.0.0.1';
+
+    config.retriesUntilDrop := seRetriesUntilDrop.Value;
 
     if chkAutoSliceSize.Checked then
-      g_Config.flags := g_Config.flags + [dmcNotFullDuplex];
+      config.flags := config.flags + [dmcNotFullDuplex];
 
-    g_Config.default_slice_size := seSliceSize.Value; //=0 则根据情况自动选择
-    g_Config.min_receivers := seWaitReceivers.Value;
+    config.default_slice_size := seSliceSize.Value;
+    config.min_receivers := seWaitReceivers.Value;
+    config.max_receivers_wait := seMaxWait.Value;
 
     //创建
     FPartsStats := TPartsStats.Create;
-    FSenderStats := TSenderStats.Create(@g_Config, DEFLT_STAT_PERIOD);
+    FSenderStats := TSenderStats.Create(config.blockSize, DEFLT_STAT_PERIOD);
 
-    FNego := DMCNegoCreate(@g_Config, FSenderStats, FPartsStats, FFifo);
+    FNego := DMCNegoCreate(@config, FSenderStats, FPartsStats, FFifo);
 
     if Assigned(FFifo) then
       FFileReader := TFileReader.Create(fileName, FFifo);
@@ -404,6 +423,10 @@ begin
 
   btnStart.Enabled := FSenderStats.TransState = tsStop;
   btnTrans.Enabled := not btnStart.Enabled;
+
+  //循环模式
+  if btnStart.Enabled and chkLoopStart.Checked then
+    btnStartClick(nil);
 end;
 
 procedure TfrmCastFile.btnTransClick(Sender: TObject);
@@ -431,6 +454,12 @@ end;
 procedure TfrmCastFile.OnAutoStop(var Msg: TMessage);
 begin
   btnStopClick(nil);
+end;
+
+procedure TfrmCastFile.lbl8Click(Sender: TObject);
+begin
+  ShellExecute(Handle, 'open', 'http://www.yryz.net/?from=DMC',
+    nil, nil, SW_SHOWNORMAL);
 end;
 
 end.
