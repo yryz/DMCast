@@ -6,21 +6,24 @@ interface
 uses
   Windows, Sysutils, WinSock, Func_u,
   Config_u, Protoc_u, SockLib_u, Console_u,
-  IStats_u, Fifo_u, HouLog_u;
+  Fifo_u, HouLog_u;
 
 type
   TNegotiate = class(TObject)
   private
     FConfig: TRecvConfig;
-    FStats: IReceiverStats;
     FUSocket: TUDPReceiverSocket;
 
     FTransState: TTransState;
+    FOnTransStateChange: TOnTransStateChange;
     procedure SetTransState(const Value: TTransState);
   protected
     FDmcMode: Word;                     //工作模式
     FClientID: Integer;                 //会话ID
     FCapabilities: Word;                //功能特征
+
+    { 统计 }
+    FStatsTotalBytes: Int64;
   private
     //请求会话
     function SendConnectReq(): Integer;
@@ -28,7 +31,7 @@ type
     //让服务端开始传输
     function SendGo(): Integer;
   public
-    constructor Create(config: PRecvConfig; Stats: IReceiverStats);
+    constructor Create(config: PRecvConfig; OnTransStateChange: TOnTransStateChange);
     destructor Destroy; override;
 
     //会话控制
@@ -41,22 +44,24 @@ type
     //会话状态
     property TransState: TTransState read FTransState write SetTransState;
 
+    //统计
+    property StatsTotalBytes: Int64 read FStatsTotalBytes write FStatsTotalBytes;
+
     property DmcMode: Word read FDmcMode write FDmcMode;
     property ClientID: Integer read FClientID;
     property Config: TRecvConfig read FConfig;
     property USocket: TUDPReceiverSocket read FUSocket;
-    property Stats: IReceiverStats read FStats;
   end;
 
 implementation
 
 { Negotiate }
 
-constructor TNegotiate.Create(config: PRecvConfig; Stats: IReceiverStats);
+constructor TNegotiate.Create;
 begin
   Move(config^, FConfig, SizeOf(FConfig));
 
-  FStats := Stats;
+  FOnTransStateChange := OnTransStateChange;
   FClientID := -1;
 
   case config^.dmcMode of
@@ -75,7 +80,6 @@ begin
   OutLog(Format('Connect to %s:%d',
     [inet_ntoa(FUSocket.CtrlAddr.sin_addr), FConfig.net.remotePort]));
 {$ENDIF}
-
 end;
 
 destructor TNegotiate.Destroy;
@@ -219,14 +223,8 @@ end;
 procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
-  if Assigned(FStats) then
-    try
-      FStats.TransStateChange(Value);
-    except
-{$IFDEF DMC_ERROR_ON}
-      OutLog2(llError, 'FStats.TransStateChange except!');
-{$ENDIF}
-    end;
+  if Assigned(FOnTransStateChange) then
+    FOnTransStateChange(Value);
 end;
 
 end.

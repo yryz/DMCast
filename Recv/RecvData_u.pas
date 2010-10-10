@@ -5,8 +5,8 @@ unit RecvData_u;
 interface
 uses
   Windows, Sysutils, MyClasses, WinSock, Func_u,
-  Config_u, Protoc_u, IStats_u, Negotiate_u,
-  Produconsum_u, Fifo_u, SockLib_u, HouLog_u;
+  Config_u, Protoc_u, Fifo_u, SockLib_u,
+  Negotiate_u, Produconsum_u, HouLog_u;
 
 const
   NR_SLICES         = 4;
@@ -65,7 +65,6 @@ type
     FDp: TDataPool;
     FConfig: PRecvConfig;
     FUSocket: TUDPReceiverSocket;
-    FStats: IReceiverStats;
     FNego: TNegotiate;
   public
     constructor Create(Index: Integer;
@@ -205,7 +204,6 @@ begin
   FDp := Dp;
   FFifo := Fifo;
   FNego := Nego;
-  FStats := Nego.Stats;
   FConfig := @Nego.Config;
   FUSocket := Nego.USocket;
 end;
@@ -437,8 +435,8 @@ end;
 function TSlice.DoFree: Integer;
 begin
   Result := FBytes;
-  if Assigned(FStats) then
-    FStats.AddBytes(FBytes);
+
+  Inc(PInt64(@FNego.StatsTotalBytes)^, FBytes);
 
   // signal data received (ENDÐÅºÅÊý¾Ý)
   if FBytes = 0 then

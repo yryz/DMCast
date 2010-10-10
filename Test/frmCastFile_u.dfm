@@ -1,6 +1,6 @@
 object frmCastFile: TfrmCastFile
-  Left = 236
-  Top = 118
+  Left = 216
+  Top = 137
   Width = 645
   Height = 421
   Caption = #25991#20214#22810#25773' v1.0a'
@@ -574,5 +574,11 @@ object frmCastFile: TfrmCastFile
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
       000000000000}
+  end
+  object tmrStats: TTimer
+    Enabled = False
+    OnTimer = tmrStatsTimer
+    Left = 80
+    Top = 192
   end
 end

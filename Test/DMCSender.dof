@@ -125,13 +125,13 @@ Locale=2052
 CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
-FileDescription=文件/数据多播
+FileDescription=文件多播(发送端)
 FileVersion=1.0.1.0
 InternalName=
 LegalCopyright=HouSoft
 LegalTrademarks=
 OriginalFilename=
-ProductName=DMC
+ProductName=DMCast
 ProductVersion=1.0.0.0
 Comments=
 [Excluded Packages]

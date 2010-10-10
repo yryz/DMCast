@@ -3,14 +3,12 @@ unit DMCReceiver_u;
 interface
 uses
   Windows, Messages, SysUtils, MyClasses,
-  FuncLib, Config_u, Protoc_u, IStats_u,
-  Negotiate_u, Fifo_u, RecvData_u, HouLog_u;
+  FuncLib, Config_u, Protoc_u, Fifo_u,
+  Negotiate_u, RecvData_u, HouLog_u;
 
 type
   TReceiverThread = class(TThread)
   private
-    FStats: IReceiverStats;
-
     FIo: TFifo;
     FNego: TNegotiate;
     FDp: TDataPool;
@@ -18,7 +16,7 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(config: PRecvConfig; TransStats: IReceiverStats);
+    constructor Create(config: PRecvConfig; OnTransStateChange: TOnTransStateChange);
     destructor Destroy; override;
     procedure Terminate; overload;
   public
@@ -30,17 +28,23 @@ type
 
   //填充默认配置
 procedure DMCConfigFill(var config: TRecvConfig); stdcall;
+
 //开始会话  TransStats 可以为nil
-function DMCNegoCreate(config: PRecvConfig; TransStats: IReceiverStats;
+function DMCNegoCreate(config: PRecvConfig; OnTransStateChange: TOnTransStateChange;
   var lpFifo: Pointer): Pointer; stdcall;
+//结束会话
+function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+
 //等待数据缓冲区可读
 function DMCDataReadWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
 //数据已消耗(以从缓冲区取出)
 function DMCDataReaded(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
+
 //等待会话结束(确保安全断开会话)
 function DMCNegoWaitEnded(lpNego: Pointer): Boolean; stdcall;
-//结束会话
-function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+
+//统计已经传输Bytes
+function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
 
 implementation
 
@@ -68,15 +72,31 @@ begin
   end;
 end;
 
-function DMCNegoCreate(config: PRecvConfig; TransStats: IReceiverStats;
+function DMCNegoCreate(config: PRecvConfig; OnTransStateChange: TOnTransStateChange;
   var lpFifo: Pointer): Pointer;
 var
   Receiver          : TReceiverThread;
 begin
-  Receiver := TReceiverThread.Create(config, TransStats);
+  Receiver := TReceiverThread.Create(config, OnTransStateChange);
   lpFifo := Receiver.Io;
   Result := Receiver;
   Receiver.Resume;
+end;
+
+function DMCNegoDestroy(lpNego: Pointer): Boolean;
+begin
+  try
+    Result := True;
+    TReceiverThread(lpNego).Terminate;
+    TReceiverThread(lpNego).Free;
+  except on e: Exception do
+    begin
+      Result := False;
+{$IFDEF EN_LOG}
+      OutLog2(llError, e.Message);
+{$ENDIF}
+    end;
+  end;
 end;
 
 function DMCDataReadWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer;
@@ -124,15 +144,13 @@ begin
   end;
 end;
 
-function DMCNegoDestroy(lpNego: Pointer): Boolean;
+function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
 begin
   try
-    Result := True;
-    TReceiverThread(lpNego).Terminate;
-    TReceiverThread(lpNego).Free;
+    Result := TReceiverThread(lpNego).FNego.StatsTotalBytes;
   except on e: Exception do
     begin
-      Result := False;
+      Result := -1;
 {$IFDEF EN_LOG}
       OutLog2(llError, e.Message);
 {$ENDIF}
@@ -142,11 +160,10 @@ end;
 
 { TReceiverThread }
 
-constructor TReceiverThread.Create(config: PRecvConfig; TransStats: IReceiverStats);
+constructor TReceiverThread.Create;
 begin
   FIo := TFifo.Create(config^.blockSize);
-  FStats := TransStats;
-  FNego := TNegotiate.Create(config, TransStats);
+  FNego := TNegotiate.Create(config, OnTransStateChange);
 
   FDp := TDataPool.Create;
   FReceiver := TReceiver.Create;
@@ -193,7 +210,7 @@ begin
     begin
       FDp.Close;
       FNego.USocket.Close;
-      FIo.Terminate;
+      FIo.Close;
     end
     else                                //会话期?
       FNego.StopNegotiate;

@@ -21,7 +21,7 @@ type
   public
     constructor Create(blockSize: Integer);
     destructor Destroy; override;
-    procedure Terminate;
+    procedure Close;
 
     function GetDataBuffer(offset: Integer): Pointer;
   published
@@ -55,7 +55,7 @@ begin
   inherited;
 end;
 
-procedure TFifo.Terminate;
+procedure TFifo.Close;
 begin
   if Assigned(FreeMemPC) then
     FreeMemPC.MarkEnd;

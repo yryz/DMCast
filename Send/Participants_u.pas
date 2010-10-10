@@ -4,7 +4,7 @@ unit Participants_u;
 
 interface
 uses
-  Windows, Sysutils, WinSock, Func_u, IStats_u;
+  Windows, Sysutils, WinSock, Func_u, Config_u;
 
 const
   MAX_CLIENTS       = 512;              //允许最大客户端，极限1456 * 8
@@ -25,7 +25,7 @@ type
   private
     FCount: Integer;
     FClientTable: TClientTable;
-    FPartsStats: IPartsStats;
+    FOnPartsChange: TOnPartsChange;
   public
     constructor Create;
     destructor Destroy; override;
@@ -42,9 +42,9 @@ type
     function GetAddr(i: Integer): PSockAddrIn;
     procedure PrintNotSet(d: PByteArray);
     procedure PrintSet(d: PByteArray);
-  published
+  public
     property Count: Integer read FCount;
-    property PartsStats: IPartsStats read FPartsStats write FPartsStats;
+    property OnPartsChange: TOnPartsChange read FOnPartsChange write FOnPartsChange;
   end;
 
 implementation
@@ -64,6 +64,7 @@ function TParticipants.Add(addr: PSockAddrIn; capabilities: Integer;
   rcvbuf: DWORD_PTR; pointopoint: Boolean): Integer;
 var
   i                 : Integer;
+  clientParam       : TClientParam;
 begin
   i := Lookup(addr);
   Result := i;
@@ -74,9 +75,12 @@ begin
   begin
     if not FClientTable[i].used then
     begin
-      if Assigned(FPartsStats) then
-        if not FPartsStats.Add(i, addr, rcvbuf) then
+      if Assigned(FOnPartsChange) then
+      begin
+        clientParam.sockBuf := rcvbuf;
+        if not FOnPartsChange(i, addr, @clientParam) then
           Exit;
+      end;
 
       FClientTable[i].addr := addr^;
       FClientTable[i].used := True;
@@ -193,8 +197,8 @@ begin
   Result := IsValid(i);
   if Result then
   begin
-    if Assigned(FPartsStats) then
-      Result := FPartsStats.Remove(i, @FClientTable[i].addr);
+    if Assigned(FOnPartsChange) then
+      Result := FOnPartsChange(i, @FClientTable[i].addr, nil);
 
     if Result then
     begin

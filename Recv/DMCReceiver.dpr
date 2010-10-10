@@ -9,10 +9,11 @@ uses
 exports
   DMCConfigFill,
   DMCNegoCreate,
+  DMCNegoDestroy,
   DMCDataReadWait,
   DMCDataReaded,
   DMCNegoWaitEnded,
-  DMCNegoDestroy;
+  DMCStatsTotalBytes;
 
 begin
 

@@ -1,11 +1,24 @@
+//v1.0a
 unit Config_u;
 
 interface
 uses
   Windows, Sysutils, WinSock;
 
-const
-  DEFLT_STAT_PERIOD = 1000;             //状态输出周期 1s
+type
+  { Transmit State }
+  TTransState = (tsStop, tsNego, tsTransing, tsComplete, tsExcept);
+  TOnTransStateChange = procedure(TransState: TTransState);
+
+  { Participants }
+  TClientParam = packed record
+    sockBuf: Integer;
+  end;
+  PClientParam = ^TClientParam;
+
+  //成员变更(lpParam=nil 断开,否则连接)
+  TOnPartsChange = function(index: Integer; addr: PSockAddrIn;
+    lpParam: PClientParam): Boolean;    //Result = true 同意更改,否则不同意
 
 type
   TDmcFlag = (

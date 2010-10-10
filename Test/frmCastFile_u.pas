@@ -5,43 +5,9 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, XPMan, Buttons, ComCtrls, ExtCtrls, ImgList, WinSock,
-  FuncLib, Config_u, IStats_u, Spin, ShellAPI;
+  FuncLib, Config_u, Spin, ShellAPI;
 
 type
-  TSenderStats = class(TInterfacedObject, ISenderStats)
-  private
-    FBlockSize: Integer;
-    FStartTime: DWORD;                  //传输开始时间
-    FStatPeriod: DWORD;                 //状态显示周期
-    FPeriodStart: DWORD;                //周期开始节拍
-    FLastPosBytes: Int64;               //最后统计进度
-    FTotalBytes: Int64;                 //传输总数
-    FNrRetrans: Int64;                  //重传数
-
-    FTransState: TTransState;
-  protected
-    procedure DoDisplay();
-  public
-    constructor Create(blockSize: Integer; statPeriod: Integer);
-    destructor Destroy; override;
-
-    procedure TransStateChange(TransState: TTransState);
-
-    procedure AddBytes(bytes: Integer);
-    procedure AddRetrans(nrRetrans: Integer);
-
-    function TransState: TTransState;
-  end;
-
-  TPartsStats = class(TInterfacedObject, IPartsStats)
-  private
-    FNrOnline: Integer;
-  public
-    function Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;
-    function Remove(index: Integer; addr: PSockAddrIn): Boolean;
-    function GetNrOnline(): Integer;
-  end;
-
   TFileReader = class(TThread)
   private
     FFile: TFileStream;
@@ -99,6 +65,7 @@ type
     lblFile: TLabel;
     lblFileSize: TLabel;
     pb1: TProgressBar;
+    tmrStats: TTimer;
 
     procedure btnStartClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
@@ -106,12 +73,12 @@ type
     procedure btnTransClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure lbl8Click(Sender: TObject);
+    procedure tmrStatsTimer(Sender: TObject);
   private
-    FPartsStats: IPartsStats;
-    FSenderStats: ISenderStats;
-
     FNego: Pointer;
     FFifo: Pointer;
+
+    FConfig: TSendConfig;
     FFileReader: TFileReader;
     procedure UpdateOnline(var Msg: TMessage); message WM_UPDATE_ONLINE;
     procedure OnAutoStop(var Msg: TMessage); message WM_AUTO_STOP;
@@ -121,11 +88,21 @@ type
 
 var
   frmCastFile       : TfrmCastFile;
-  dwThID            : DWORD;
   g_FileSize        : Int64;
+  g_TransState      : TTransState;
+
+  g_NrOnline        : Integer;
+  { 速度统计 }
+  g_TransStartTime  : DWORD;
+  g_TransPeriodStart: DWORD;
+  g_LastPosBytes    : Int64;
+
+procedure OnTransStateChange(TransState: TTransState);
+function OnPartsChange(index: Integer; addr: PSockAddrIn;
+  lpParam: PClientParam): Boolean;
 
 implementation
-//{$DEFINE IS_IMPORT_MODULE}
+{$DEFINE IS_IMPORT_MODULE}
 {$IFNDEF IS_IMPORT_MODULE}
 uses
   DMCSender_u;
@@ -134,23 +111,47 @@ uses
 const
   DMC_SENDER_DLL    = 'DMCSender.dll';
 
+  //填充默认配置
+
 procedure DMCConfigFill(var config: TSendConfig); stdcall;
   external DMC_SENDER_DLL;
 
-function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
-  PartsStats: IPartsStats; var lpFifo: Pointer): Pointer; stdcall;
+//创建会话  OnTransStateChange,OnPartsChange 可以为nil
+
+function DMCNegoCreate(config: PSendConfig;
+  OnTransStateChange: TOnTransStateChange;
+  OnPartsChange: TOnPartsChange;
+  var lpFifo: Pointer): Pointer; stdcall;
   external DMC_SENDER_DLL;
+
+//结束会话(信号,异步)
+
+function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+  external DMC_SENDER_DLL;
+
+//等待缓冲区可写
 
 function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
   external DMC_SENDER_DLL;
 
+//数据生产完成
+
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
   external DMC_SENDER_DLL;
+
+//开始传输(信号)
 
 function DMCDoTransfer(lpNego: Pointer): Boolean; stdcall;
   external DMC_SENDER_DLL;
 
-function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+//统计已经传输Bytes
+
+function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
+  external DMC_SENDER_DLL;
+
+//统计重传Blocks(块)
+
+function DMCStatsBlockRetrans(lpNego: Pointer): Int64; stdcall;
   external DMC_SENDER_DLL;
 {$ENDIF}
 
@@ -158,38 +159,30 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 { TSenderStats }
 
-constructor TSenderStats.Create(blockSize: Integer; statPeriod: Integer);
+procedure OnTransStateChange(TransState: TTransState);
 begin
-  FBlockSize := blockSize;
-  FStatPeriod := statPeriod;
-end;
-
-destructor TSenderStats.Destroy;
-begin
-  inherited;
-end;
-
-procedure TSenderStats.TransStateChange;
-begin
-  FTransState := TransState;
+  g_TransState := TransState;
   case TransState of
     tsNego:
       begin
+        g_NrOnline := 0;
+        frmCastFile.tmrStatsTimer(nil); //Stats Clear 0
 {$IFDEF CONSOLE}
         Writeln('Start Negotiations...');
 {$ENDIF}
       end;
     tsTransing:
       begin
-        FStartTime := GetTickCount;
-        FPeriodStart := FStartTime;
+        g_TransStartTime := GetTickCount;
+        g_TransPeriodStart := g_TransStartTime;
+        frmCastFile.tmrStats.Enabled := True;
 {$IFDEF CONSOLE}
         Writeln('Start Trans..');
 {$ENDIF}
       end;
     tsComplete:
       begin
-        DoDisplay;
+        frmCastFile.tmrStatsTimer(nil);
 {$IFDEF CONSOLE}
         Writeln('Transfer Complete.');
 {$ENDIF}
@@ -211,107 +204,33 @@ begin
   end;
 end;
 
-procedure TSenderStats.AddBytes(bytes: Integer);
-begin
-  Inc(FTotalBytes, bytes);
-  DoDisplay;
-end;
-
-procedure TSenderStats.AddRetrans(nrRetrans: Integer);
-begin
-  Inc(FNrRetrans, nrRetrans);
-  DoDisplay;
-end;
-
-procedure TSenderStats.DoDisplay();
+function OnPartsChange(index: Integer; addr: PSockAddrIn;
+  lpParam: PClientParam): Boolean;
 var
-  tickNow, tdiff    : DWORD;
-  blocks            : dword;
-  bw, percent       : double;
+  Item              : TListItem;
 begin
-  tickNow := GetTickCount;
+  Result := True;
 
-  if FTransState = tsTransing then
-  begin
-    tdiff := DiffTickCount(FPeriodStart, tickNow);
-    if (tdiff < FStatPeriod) then
-      Exit;
-    if tdiff = 0 then
-      tdiff := 1;
-    //带宽统计
-    bw := (FTotalBytes - FLastPosBytes) * 1000 / tdiff; // Byte/s
+  if lpParam <> nil then
+  begin                                 //Add
+    Inc(g_NrOnline);
+    Item := frmCastFile.lvClient.Items.Add;
+    Item.Caption := IntToStr(index);
+    Item.SubItems.Add(inet_ntoa(addr^.sin_addr));
+    Item.SubItems.Add(GetSizeKMG(lpParam^.sockBuf));
   end
-  else
+  else                                  //Remove
   begin
-    tdiff := DiffTickCount(FStartTime, tickNow);
-    if tdiff = 0 then
-      tdiff := 1;
-    //平均带宽统计
-    bw := FTotalBytes * 1000 / tdiff;   // Byte/s
-  end;
-
-  //重传块统计
-  blocks := (FTotalBytes + FBlockSize - 1) div FBlockSize;
-  if blocks = 0 then
-    percent := 0
-  else
-    percent := FNrRetrans / blocks;
-  //显示状态
-
-  if g_FileSize > 0 then
-    frmCastFile.pb1.Position := FTotalBytes * 100 div g_FileSize;
-  frmCastFile.lblTransBytes.Caption := GetSizeKMG(FTotalBytes);
-  frmCastFile.lblSpeed.Caption := GetSizeKMG(Trunc(bw)) + '/s';
-  frmCastFile.lblRexmit.Caption := Format('%d(%.2f%%)', [FNrRetrans, percent]);
-
-  FPeriodStart := GetTickCount;
-  FLastPosBytes := FTotalBytes;
-end;
-
-{!--END--}
-
-function TSenderStats.TransState: TTransState;
-begin
-  Result := FTransState;
-end;
-
-{ TPartsStats }
-
-function TPartsStats.Add(index: Integer; addr: PSockAddrIn; sockBuf: Integer): Boolean;
-var
-  Item              : TListItem;
-begin
-  Result := True;
-  Inc(FNrOnline);
-  Item := frmCastFile.lvClient.Items.Add;
-  Item.Caption := IntToStr(index);
-  Item.SubItems.Add(inet_ntoa(addr^.sin_addr));
-  Item.SubItems.Add(GetSizeKMG(sockBuf));
-
-  PostMessage(frmCastFile.Handle, WM_UPDATE_ONLINE, 0, 0);
-end;
-
-function TPartsStats.Remove(index: Integer; addr: PSockAddrIn): Boolean;
-var
-  Item              : TListItem;
-begin
-  Result := True;
-  Item := frmCastFile.lvClient.FindCaption(-1, IntToStr(index), False, False, False);
-  if Assigned(Item) then
-  begin
-    Item.ImageIndex := 1;
-    Dec(FNrOnline);
+    Item := frmCastFile.lvClient.FindCaption(-1, IntToStr(index), False, False, False);
+    if Assigned(Item) then
+    begin
+      Item.ImageIndex := 1;
+      Dec(g_NrOnline);
+    end;
   end;
 
   PostMessage(frmCastFile.Handle, WM_UPDATE_ONLINE, 0, 0);
 end;
-
-function TPartsStats.GetNrOnline: Integer;
-begin
-  Result := FNrOnline;
-end;
-
-{!--END--}
 
 { TFileReader }
 
@@ -353,10 +272,54 @@ begin
   WaitFor;
 end;
 
+{ End }
+
+procedure TfrmCastFile.tmrStatsTimer(Sender: TObject);
+var
+  totalBytes        : Int64;
+  tickNow, tdiff    : DWORD;
+  rexmitBlocks      : dword;
+  bw, percent       : double;
+begin
+  if g_TransState in [tsComplete, tsStop, tsExcept] then //停止?
+    tmrStats.Enabled := False;
+
+  if FNego = nil then
+  begin
+    tmrStats.Enabled := False;
+    Exit;
+  end;
+
+  tickNow := GetTickCount;
+  totalBytes := DMCStatsTotalBytes(FNego);
+
+  tdiff := DiffTickCount(g_TransStartTime, tickNow);
+  if tdiff = 0 then
+    tdiff := 1;
+  //平均带宽统计
+  bw := totalBytes * 1000 / tdiff;      // Byte/s
+
+  //重传块统计
+  rexmitBlocks := DMCStatsBlockRetrans(FNego);
+  if rexmitBlocks < 1 then
+    percent := 0
+  else
+    percent := rexmitBlocks / (totalBytes div FConfig.blockSize);
+
+  //显示状态
+  if g_FileSize > 0 then
+    pb1.Position := totalBytes * 100 div g_FileSize;
+  lblTransBytes.Caption := GetSizeKMG(totalBytes);
+  lblSpeed.Caption := GetSizeKMG(Trunc(bw)) + '/s';
+  lblRexmit.Caption := Format('%d(%.2f%%)', [rexmitBlocks, percent]);
+
+  g_LastPosBytes := totalBytes;
+  g_TransPeriodStart := GetTickCount;
+end;
+
 procedure TfrmCastFile.btnStartClick(Sender: TObject);
 var
   fileName          : string;
-  config            : TSendConfig;
 begin
   fileName := edtFile.Text;
   if FileExists(fileName) then
@@ -371,25 +334,22 @@ begin
     pb1.Hint := '总数据 ' + lblFileSize.Caption;
 
     //默认配置
-    DMCConfigFill(config);
+    DMCConfigFill(FConfig);
     if chkStreamMode.Checked then
-      config.dmcMode := dmcStreamMode;
+      FConfig.dmcMode := dmcStreamMode;
     //config.net.mcastRdv:='239.0.0.1';
 
-    config.retriesUntilDrop := seRetriesUntilDrop.Value;
+    FConfig.retriesUntilDrop := seRetriesUntilDrop.Value;
 
     if chkAutoSliceSize.Checked then
-      config.flags := config.flags + [dmcNotFullDuplex];
+      FConfig.flags := FConfig.flags + [dmcNotFullDuplex];
 
-    config.default_slice_size := seSliceSize.Value;
-    config.min_receivers := seWaitReceivers.Value;
-    config.max_receivers_wait := seMaxWait.Value;
+    FConfig.default_slice_size := seSliceSize.Value;
+    FConfig.min_receivers := seWaitReceivers.Value;
+    FConfig.max_receivers_wait := seMaxWait.Value;
 
     //创建
-    FPartsStats := TPartsStats.Create;
-    FSenderStats := TSenderStats.Create(config.blockSize, DEFLT_STAT_PERIOD);
-
-    FNego := DMCNegoCreate(@config, FSenderStats, FPartsStats, FFifo);
+    FNego := DMCNegoCreate(@FConfig, OnTransStateChange, OnPartsChange, FFifo);
 
     if Assigned(FFifo) then
       FFileReader := TFileReader.Create(fileName, FFifo);
@@ -410,6 +370,7 @@ end;
 procedure TfrmCastFile.btnStopClick(Sender: TObject);
 begin
   btnStop.Enabled := False;
+  frmCastFile.tmrStats.Enabled := False;
 
   if FNego <> nil then
   begin
@@ -421,7 +382,7 @@ begin
     FNego := nil;
   end;
 
-  btnStart.Enabled := FSenderStats.TransState = tsStop;
+  btnStart.Enabled := g_TransState = tsStop;
   btnTrans.Enabled := not btnStart.Enabled;
 
   //循环模式
@@ -445,10 +406,10 @@ end;
 
 procedure TfrmCastFile.UpdateOnline;
 begin
-  btnTrans.Enabled := (FSenderStats.TransState = tsNego)
-    and (FPartsStats.GetNrOnline > 0);
+  btnTrans.Enabled := (g_TransState = tsNego)
+    and (g_NrOnline > 0);
   stat1.Panels[0].Text := '客户端: '
-    + IntToStr(FPartsStats.GetNrOnline) + '/' + IntToStr(lvClient.Items.Count);
+    + IntToStr(g_NrOnline) + '/' + IntToStr(lvClient.Items.Count);
 end;
 
 procedure TfrmCastFile.OnAutoStop(var Msg: TMessage);

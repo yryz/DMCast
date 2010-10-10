@@ -110,11 +110,11 @@ ActiveLang=
 ProjectLang=
 RootDir=d:\Program Files\Borland\Delphi7\Bin\
 [Version Info]
-IncludeVerInfo=0
+IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
-Release=0
+Release=1
 Build=0
 Debug=0
 PreRelease=0
@@ -124,14 +124,14 @@ DLL=0
 Locale=2052
 CodePage=936
 [Version Info Keys]
-CompanyName=
-FileDescription=
-FileVersion=1.0.0.0
+CompanyName=HouSoft
+FileDescription=文件多播(接收端)
+FileVersion=1.0.1.0
 InternalName=
-LegalCopyright=
+LegalCopyright=HouSoft
 LegalTrademarks=
 OriginalFilename=
-ProductName=
+ProductName=DMCast
 ProductVersion=1.0.0.0
 Comments=
 [Excluded Packages]

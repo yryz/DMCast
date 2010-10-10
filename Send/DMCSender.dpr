@@ -9,10 +9,12 @@ uses
 exports
   DMCConfigFill,
   DMCNegoCreate,
+  DMCNegoDestroy,
   DMCDataWriteWait,
   DMCDataWrited,
   DMCDoTransfer,
-  DMCNegoDestroy;
+  DMCStatsTotalBytes,
+  DMCStatsBlockRetrans;
 
 begin
 

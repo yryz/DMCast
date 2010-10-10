@@ -6,7 +6,7 @@ interface
 uses
   Windows, Sysutils, WinSock, Func_u,
   Config_u, Protoc_u, SockLib_u, Console_u,
-  Participants_u, IStats_u, HouLog_u;
+  Participants_u, HouLog_u;
 
 type
   TNegotiate = class(TObject)
@@ -14,16 +14,20 @@ type
     FAbort: Boolean;
     FConfig: TSendConfig;
     FParts: TParticipants;
-    FStats: ISenderStats;
     FUSocket: TUDPSenderSocket;
 
     FConsole: TConsole;                 //控制会话Select
 
     FTransState: TTransState;
+    FOnTransStateChange: TOnTransStateChange;
     procedure SetTransState(const Value: TTransState);
   protected
     FDmcMode: Word;
     FCapabilities: Word;
+
+    { 统计 }
+    FStatsTotalBytes: Int64;
+    FStatsBlockRetrans: Int64;
   private
     //单点模式?
     function IsPointToPoint(): Boolean;
@@ -34,8 +38,8 @@ type
     //会话调度
     function MainDispatcher(var tries: Integer; firstConnected: PDWORD): Integer;
   public
-    constructor Create(config: PSendConfig; TransStats: ISenderStats;
-      PartsStats: IPartsStats);
+    constructor Create(config: PSendConfig; OnTransStateChange: TOnTransStateChange;
+      OnPartsChange: TOnPartsChange);
     destructor Destroy; override;
 
     //会话控制
@@ -56,11 +60,15 @@ type
     //会话状态
     property TransState: TTransState read FTransState write SetTransState;
 
+    //统计
+    property StatsTotalBytes: Int64 read FStatsTotalBytes write FStatsTotalBytes;
+    property StatsBlockRetrans: Int64 read FStatsBlockRetrans write FStatsBlockRetrans;
+
     property DmcMode: Word read FDmcMode;
     property Config: TSendConfig read FConfig;
     property USocket: TUDPSenderSocket read FUSocket;
     property Parts: TParticipants read FParts;
-    property Stats: ISenderStats read FStats;
+
   end;
 
 implementation
@@ -74,9 +82,9 @@ begin
   Move(config^, FConfig, SizeOf(FConfig));
 
   FConsole := TConsole.Create;
-  FStats := TransStats;
+  FOnTransStateChange := OnTransStateChange;
   FParts := TParticipants.Create;
-  FParts.PartsStats := PartsStats;
+  FParts.OnPartsChange := OnPartsChange;
 
   case config^.dmcMode of
     dmcFixedMode: FDmcMode := DMC_FIXED;
@@ -368,6 +376,9 @@ var
   i                 : Integer;
   isPtP             : Boolean;
 begin
+  FStatsTotalBytes := 0;
+  FStatsBlockRetrans := 0;
+
   isPtP := IsPointToPoint();
 
   for i := 0 to MAX_CLIENTS - 1 do
@@ -422,8 +433,8 @@ end;
 procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
-  if Assigned(FStats) then
-    FStats.TransStateChange(Value);
+  if Assigned(FOnTransStateChange) then
+    FOnTransStateChange(Value);
 end;
 
 end.

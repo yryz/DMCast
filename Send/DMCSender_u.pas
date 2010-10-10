@@ -3,25 +3,24 @@ unit DMCSender_u;
 interface
 uses
   Windows, Messages, SysUtils, MyClasses,
-  FuncLib, Config_u, Protoc_u, IStats_u,
-  Negotiate_u, Fifo_u, SendData_u, HouLog_u;
+  FuncLib, Config_u, Protoc_u, Fifo_u,
+  Negotiate_u, SendData_u, HouLog_u;
 
 type
   TSenderThread = class(TThread)
   private
-    FStats: ISenderStats;
-    FNego: TNegotiate;
-
     FDp: TDataPool;
     FRc: TRChannel;
     FSender: TSender;
   protected
     FIo: TFifo;
+    FNego: TNegotiate;
+  protected
     procedure Execute; override;
-    property Nego: TNegotiate read FNego;
   public
-    constructor Create(config: PSendConfig; TransStats: ISenderStats;
-      PartsStats: IPartsStats);
+    constructor Create(config: PSendConfig;
+      OnTransStateChange: TOnTransStateChange;
+      OnPartsChange: TOnPartsChange);
     destructor Destroy; override;
     procedure Terminate; overload;
   end;
@@ -30,17 +29,28 @@ type
 
   //填充默认配置
 procedure DMCConfigFill(var config: TSendConfig); stdcall;
-//开始会话  TransStats,PartsStats 可以为nil
-function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
-  PartsStats: IPartsStats; var lpFifo: Pointer): Pointer; stdcall;
+
+//创建会话  OnTransStateChange,OnPartsChange 可以为nil
+function DMCNegoCreate(config: PSendConfig;
+  OnTransStateChange: TOnTransStateChange;
+  OnPartsChange: TOnPartsChange;
+  var lpFifo: Pointer): Pointer; stdcall;
+
+//结束会话(信号,异步)
+function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+
 //等待缓冲区可写
 function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
 //数据生产完成
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
+
 //开始传输(信号)
 function DMCDoTransfer(lpNego: Pointer): Boolean; stdcall;
-//结束会话(信号,异步)
-function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
+
+//统计已经传输Bytes
+function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
+//统计重传Blocks(块)
+function DMCStatsBlockRetrans(lpNego: Pointer): Int64; stdcall;
 
 implementation
 
@@ -74,15 +84,40 @@ begin
   end;
 end;
 
-function DMCNegoCreate(config: PSendConfig; TransStats: ISenderStats;
-  PartsStats: IPartsStats; var lpFifo: Pointer): Pointer;
+function DMCNegoCreate(config: PSendConfig;
+  OnTransStateChange: TOnTransStateChange;
+  OnPartsChange: TOnPartsChange;
+  var lpFifo: Pointer): Pointer;
 var
   Sender            : TSenderThread;
 begin
-  Sender := TSenderThread.Create(config, TransStats, PartsStats);
+  Sender := TSenderThread.Create(config, OnTransStateChange, OnPartsChange);
   lpFifo := Sender.FIo;
   Result := Sender;
   Sender.Resume;
+end;
+
+function DMCNegoDestroy(lpNego: Pointer): Boolean;
+begin
+  Result := True;
+  try
+    with TSenderThread(lpNego) do
+    begin
+      Terminate;
+      Sleep(0);
+      FreeOnTerminate := True;
+      if Suspended then
+        Resume;
+    end;
+
+  except on e: Exception do
+    begin
+      Result := False;
+{$IFDEF EN_LOG}
+      OutLog2(llError, e.Message);
+{$ENDIF}
+    end;
+  end;
 end;
 
 function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer;
@@ -129,7 +164,7 @@ function DMCDoTransfer(lpNego: Pointer): Boolean;
 begin
   Result := True;
   try
-    TSenderThread(lpNego).Nego.PostDoTransfer;
+    TSenderThread(lpNego).FNego.PostDoTransfer;
   except on e: Exception do
     begin
       Result := False;
@@ -140,22 +175,27 @@ begin
   end;
 end;
 
-function DMCNegoDestroy(lpNego: Pointer): Boolean;
+function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
 begin
-  Result := True;
   try
-    with TSenderThread(lpNego) do
-    begin
-      Terminate;
-      Sleep(0);
-      FreeOnTerminate := True;
-      if Suspended then
-        Resume;
-    end;
-
+    Result := TSenderThread(lpNego).FNego.StatsTotalBytes;
   except on e: Exception do
     begin
-      Result := False;
+      Result := -1;
+{$IFDEF EN_LOG}
+      OutLog2(llError, e.Message);
+{$ENDIF}
+    end;
+  end;
+end;
+
+function DMCStatsBlockRetrans(lpNego: Pointer): Int64; stdcall;
+begin
+  try
+    Result := TSenderThread(lpNego).FNego.StatsBlockRetrans;
+  except on e: Exception do
+    begin
+      Result := -1;
 {$IFDEF EN_LOG}
       OutLog2(llError, e.Message);
 {$ENDIF}
@@ -165,12 +205,10 @@ end;
 
 { TSenderThread }
 
-constructor TSenderThread.Create(config: PSendConfig; TransStats: ISenderStats;
-  PartsStats: IPartsStats);
+constructor TSenderThread.Create;
 begin
   FIo := TFifo.Create(config^.blockSize);
-  FStats := TransStats;
-  FNego := TNegotiate.Create(config, TransStats, PartsStats);
+  FNego := TNegotiate.Create(config, OnTransStateChange, OnPartsChange);
   inherited Create(True);
 end;
 
@@ -228,7 +266,7 @@ begin
       FDp.Close;
       FNego.USocket.Close;
       FRc.Terminate;
-      FIo.Terminate;
+      FIo.Close;
     end
     else                                //会话期?
       FNego.StopNegotiate;

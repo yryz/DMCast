@@ -278,10 +278,12 @@ end;
 function TList.Add(Item: Pointer): Integer;
 begin
   Result := FCount;
-  if Result = FCapacity then Grow;
+  if Result = FCapacity then
+    Grow;
   FList^[Result] := Item;
   Inc(FCount);
-  if Item <> nil then Notify(Item, lnAdded);
+  if Item <> nil then
+    Notify(Item, lnAdded);
 end;
 
 procedure TList.Clear;
@@ -294,19 +296,24 @@ procedure TList.Delete(Index: Integer);
 var
   Temp              : Pointer;
 begin
-  if (Index < 0) or (Index >= FCount) then Exit;
+  if (Index < 0) or (Index >= FCount) then
+    Exit;
   Temp := Items[Index];
   Dec(FCount);
-  if Index < FCount then System.Move(FList^[Index + 1], FList^[Index], (FCount - Index) * SizeOf(Pointer));
-  if Temp <> nil then Notify(Temp, lnDeleted);
+  if Index < FCount then
+    System.Move(FList^[Index + 1], FList^[Index], (FCount - Index) * SizeOf(Pointer));
+  if Temp <> nil then
+    Notify(Temp, lnDeleted);
 end;
 
 procedure TList.Exchange(Index1, Index2: Integer);
 var
   Item              : Pointer;
 begin
-  if (Index1 < 0) or (Index1 >= FCount) then Exit;
-  if (Index2 < 0) or (Index2 >= FCount) then Exit;
+  if (Index1 < 0) or (Index1 >= FCount) then
+    Exit;
+  if (Index2 < 0) or (Index2 >= FCount) then
+    Exit;
   Item := FList^[Index1];
   FList^[Index1] := FList^[Index2];
   FList^[Index2] := Item;
@@ -314,7 +321,8 @@ end;
 
 function TList.Expand: TList;
 begin
-  if FCount = FCapacity then Grow;
+  if FCount = FCapacity then
+    Grow;
   Result := Self;
 end;
 
@@ -326,7 +334,8 @@ end;
 function TList.Get(Index: Integer): Pointer;
 begin
   Result := nil;
-  if (Index < 0) or (Index >= FCount) then Exit;
+  if (Index < 0) or (Index >= FCount) then
+    Exit;
   Result := FList^[Index];
 end;
 
@@ -336,11 +345,10 @@ var
 begin
   if FCapacity > 64 then
     Delta := FCapacity div 4
+  else if FCapacity > 8 then
+    Delta := 16
   else
-    if FCapacity > 8 then
-      Delta := 16
-    else
-      Delta := 4;
+    Delta := 4;
   SetCapacity(FCapacity + Delta);
 end;
 
@@ -355,12 +363,16 @@ end;
 
 procedure TList.Insert(Index: Integer; Item: Pointer);
 begin
-  if (Index < 0) or (Index > FCount) then Exit;
-  if FCount = FCapacity then Grow;
-  if Index < FCount then System.Move(FList^[Index], FList^[Index + 1], (FCount - Index) * SizeOf(Pointer));
+  if (Index < 0) or (Index > FCount) then
+    Exit;
+  if FCount = FCapacity then
+    Grow;
+  if Index < FCount then
+    System.Move(FList^[Index], FList^[Index + 1], (FCount - Index) * SizeOf(Pointer));
   FList^[Index] := Item;
   Inc(FCount);
-  if Item <> nil then Notify(Item, lnAdded);
+  if Item <> nil then
+    Notify(Item, lnAdded);
 end;
 
 function TList.Last: Pointer;
@@ -374,7 +386,8 @@ var
 begin
   if CurIndex <> NewIndex then
   begin
-    if (NewIndex < 0) or (NewIndex >= FCount) then Exit;
+    if (NewIndex < 0) or (NewIndex >= FCount) then
+      Exit;
     Item := Get(CurIndex);
     FList^[CurIndex] := nil;
     Delete(CurIndex);
@@ -387,20 +400,24 @@ procedure TList.Put(Index: Integer; Item: Pointer);
 var
   Temp              : Pointer;
 begin
-  if (Index < 0) or (Index >= FCount) then Exit;
+  if (Index < 0) or (Index >= FCount) then
+    Exit;
   if Item <> FList^[Index] then
   begin
     Temp := FList^[Index];
     FList^[Index] := Item;
-    if Temp <> nil then Notify(Temp, lnDeleted);
-    if Item <> nil then Notify(Item, lnAdded);
+    if Temp <> nil then
+      Notify(Temp, lnDeleted);
+    if Item <> nil then
+      Notify(Item, lnAdded);
   end;
 end;
 
 function TList.Remove(Item: Pointer): Integer;
 begin
   Result := IndexOf(Item);
-  if Result >= 0 then Delete(Result);
+  if Result >= 0 then
+    Delete(Result);
 end;
 
 procedure TList.Pack;
@@ -408,12 +425,14 @@ var
   I                 : Integer;
 begin
   for I := FCount - 1 downto 0 do
-    if Items[I] = nil then Delete(I);
+    if Items[I] = nil then
+      Delete(I);
 end;
 
 procedure TList.SetCapacity(NewCapacity: Integer);
 begin
-  if (NewCapacity < FCount) or (NewCapacity > MaxListSize) then Exit;
+  if (NewCapacity < FCount) or (NewCapacity > MaxListSize) then
+    Exit;
   if NewCapacity <> FCapacity then
   begin
     ReallocMem(FList, NewCapacity * SizeOf(Pointer));
@@ -425,7 +444,8 @@ procedure TList.SetCount(NewCount: Integer);
 var
   I                 : Integer;
 begin
-  if (NewCount < 0) or (NewCount > MaxListSize) then Exit;
+  if (NewCount < 0) or (NewCount > MaxListSize) then
+    Exit;
   if NewCount > FCapacity then
     SetCapacity(NewCount);
   if NewCount > FCount then
@@ -459,14 +479,16 @@ begin
         Dec(J);
       end;
     until I > J;
-    if L < J then QuickSort(SortList, L, J, SCompare);
+    if L < J then
+      QuickSort(SortList, L, J, SCompare);
     L := I;
   until I >= R;
 end;
 
 procedure TList.Sort(Compare: TListSortCompare);
 begin
-  if (FList <> nil) and (Count > 0) then QuickSort(FList, 0, Count - 1, Compare);
+  if (FList <> nil) and (Count > 0) then
+    QuickSort(FList, 0, Count - 1, Compare);
 end;
 
 function TList.Extract(Item: Pointer): Pointer;
@@ -511,21 +533,26 @@ begin
       end;
     laAnd:
       for I := Count - 1 downto 0 do
-        if LSource.IndexOf(Items[I]) = -1 then Delete(I);
+        if LSource.IndexOf(Items[I]) = -1 then
+          Delete(I);
     laOr:
       for I := 0 to LSource.Count - 1 do
-        if IndexOf(LSource[I]) = -1 then Add(LSource[I]);
+        if IndexOf(LSource[I]) = -1 then
+          Add(LSource[I]);
     laXor:
       begin
         LTemp := TList.Create;
         try
           LTemp.Capacity := LSource.Count;
           for I := 0 to LSource.Count - 1 do
-            if IndexOf(LSource[I]) = -1 then LTemp.Add(LSource[I]);
+            if IndexOf(LSource[I]) = -1 then
+              LTemp.Add(LSource[I]);
           for I := Count - 1 downto 0 do
-            if LSource.IndexOf(Items[I]) <> -1 then Delete(I);
+            if LSource.IndexOf(Items[I]) <> -1 then
+              Delete(I);
           I := Count + LTemp.Count;
-          if Capacity < I then Capacity := I;
+          if Capacity < I then
+            Capacity := I;
           for I := 0 to LTemp.Count - 1 do
             Add(LTemp[I]);
         finally
@@ -534,14 +561,16 @@ begin
       end;
     laSrcUnique:
       for I := Count - 1 downto 0 do
-        if LSource.IndexOf(Items[I]) <> -1 then Delete(I);
+        if LSource.IndexOf(Items[I]) <> -1 then
+          Delete(I);
     laDestUnique:
       begin
         LTemp := TList.Create;
         try
           LTemp.Capacity := LSource.Count;
           for I := LSource.Count - 1 downto 0 do
-            if IndexOf(LSource[I]) = -1 then LTemp.Add(LSource[I]);
+            if IndexOf(LSource[I]) = -1 then
+              LTemp.Add(LSource[I]);
           Assign(LTemp);
         finally
           LTemp.Free;
@@ -576,7 +605,8 @@ procedure TThreadList.Add(Item: Pointer);
 begin
   LockList;
   try
-    if (Duplicates = dupAccept) or (FList.IndexOf(Item) = -1) then FList.Add(Item)
+    if (Duplicates = dupAccept) or (FList.IndexOf(Item) = -1) then
+      FList.Add(Item)
   finally
     UnlockList;
   end;
@@ -624,6 +654,7 @@ type
 var
   ProcPosted        : Boolean;
   SyncList          : TList = nil;
+  SyncEvent         : THandle;
   ThreadLock        : TRTLCriticalSection;
   ThreadCount       : Integer;
   WakeMainThread    : TNotifyEvent = nil;
@@ -632,7 +663,8 @@ procedure AddThread;
 begin
   EnterCriticalSection(ThreadLock);
   try
-    if (ThreadCount = 0) and (SyncList = nil) then SyncList := TList.Create;
+    if (ThreadCount = 0) and (SyncList = nil) then
+      SyncList := TList.Create;
     Inc(ThreadCount);
   finally
     LeaveCriticalSection(ThreadLock);
@@ -654,7 +686,8 @@ var
   SyncProc          : PSyncProc;
 begin
   Result := False;
-  if GetCurrentThreadID <> MainThreadID then Exit;
+  if GetCurrentThreadID <> MainThreadID then
+    Exit;
   if ProcPosted then
   begin
     EnterCriticalSection(ThreadLock);
@@ -678,7 +711,9 @@ begin
     finally
       LeaveCriticalSection(ThreadLock);
     end;
-  end else Result := False;
+  end
+  else
+    Result := False;
 end;
 
 function ThreadProc(Thread: TThread): Integer;
@@ -687,17 +722,18 @@ var
 begin
   try
     if not Thread.Terminated then
-    try
-      Thread.Execute;
-    except
-      Thread.FFatalException := AcquireExceptionObject;
-    end;
+      try
+        Thread.Execute;
+      except
+        Thread.FFatalException := AcquireExceptionObject;
+      end;
   finally
     FreeThread := Thread.FFreeOnTerminate;
     Result := Thread.FReturnValue;
     Thread.FFinished := True;
     Thread.DoTerminate;
-    if FreeThread then Thread.Free;
+    if FreeThread then
+      Thread.Free;
     EndThread(Result);
   end;
 end;
@@ -716,10 +752,12 @@ begin
   if (FThreadID <> 0) and not FFinished then
   begin
     Terminate;
-    if FCreateSuspended then Resume;
+    if FCreateSuspended then
+      Resume;
     WaitFor;
   end;
-  if FHandle <> 0 then CloseHandle(FHandle);
+  if FHandle <> 0 then
+    CloseHandle(FHandle);
   inherited Destroy;
   FFatalException.Free;
   RemoveThread;
@@ -727,7 +765,8 @@ end;
 
 procedure TThread.AfterConstruction;
 begin
-  if not FCreateSuspended then Resume;
+  if not FCreateSuspended then
+    Resume;
 end;
 
 procedure TThread.CheckThreadError(ErrCode: Integer);
@@ -736,17 +775,20 @@ end;
 
 procedure TThread.CheckThreadError(Success: Boolean);
 begin
-  if not Success then CheckThreadError(GetLastError);
+  if not Success then
+    CheckThreadError(GetLastError);
 end;
 
 procedure TThread.CallOnTerminate;
 begin
-  if Assigned(FOnTerminate) then FOnTerminate(Self);
+  if Assigned(FOnTerminate) then
+    FOnTerminate(Self);
 end;
 
 procedure TThread.DoTerminate;
 begin
-  if Assigned(FOnTerminate) then Synchronize(CallOnTerminate);
+  if Assigned(FOnTerminate) then
+    Synchronize(CallOnTerminate);
 end;
 
 const
@@ -764,7 +806,8 @@ begin
   CheckThreadError(P <> THREAD_PRIORITY_ERROR_RETURN);
   Result := tpNormal;
   for I := Low(TThreadPriority) to High(TThreadPriority) do
-    if Priorities[I] = P then Result := I;
+    if Priorities[I] = P then
+      Result := I;
 end;
 
 procedure TThread.SetPriority(Value: TThreadPriority);
@@ -785,7 +828,8 @@ begin
       SyncProc.Thread := Self;
       SyncList.Add(@SyncProc);
       ProcPosted := True;
-      if Assigned(WakeMainThread) then WakeMainThread(Self);
+      if Assigned(WakeMainThread) then
+        WakeMainThread(Self);
       LeaveCriticalSection(ThreadLock);
       try
         WaitForSingleObject(SyncProc.Signal, INFINITE);
@@ -798,7 +842,8 @@ begin
   finally
     CloseHandle(SyncProc.Signal);
   end;
-  if Assigned(FSynchronizeException) then raise FSynchronizeException;
+  if Assigned(FSynchronizeException) then
+    raise FSynchronizeException;
 end;
 
 procedure TThread.SetSuspended(Value: Boolean);
@@ -822,7 +867,8 @@ var
 begin
   SuspendCount := ResumeThread(FHandle);
   CheckThreadError(SuspendCount >= 0);
-  if SuspendCount = 1 then FSuspended := False;
+  if SuspendCount = 1 then
+    FSuspended := False;
 end;
 
 procedure TThread.Terminate;
@@ -832,22 +878,29 @@ end;
 
 function TThread.WaitFor: LongWord;
 var
-  H                 : THandle;
+  H                 : array[0..1] of THandle;
   WaitResult        : Cardinal;
   Msg               : TMsg;
 begin
-  H := FHandle;
+  H[0] := FHandle;
   if GetCurrentThreadID = MainThreadID then
   begin
     WaitResult := 0;
+    H[1] := SyncEvent;
     repeat
-      if WaitResult = WAIT_OBJECT_0 + 1 then PeekMessage(Msg, 0, 0, 0, PM_NOREMOVE);
-      Sleep(0);
-      CheckSynchronize;
-      WaitResult := MsgWaitForMultipleObjects(1, H, False, 0, QS_SENDMESSAGE);
+      { This prevents a potential deadlock if the background thread
+        does a SendMessage to the foreground thread }
+      if WaitResult = WAIT_OBJECT_0 + 2 then
+        PeekMessage(Msg, 0, 0, 0, PM_NOREMOVE);
+      WaitResult := MsgWaitForMultipleObjects(2, H, False, 1000, QS_SENDMESSAGE);
+      CheckThreadError(WaitResult <> WAIT_FAILED);
+      if WaitResult = WAIT_OBJECT_0 + 1 then
+        CheckSynchronize;
     until WaitResult = WAIT_OBJECT_0;
-  end else WaitForSingleObject(H, INFINITE);
-  CheckThreadError(GetExitCodeThread(H, Result));
+  end
+  else
+    WaitForSingleObject(H[0], INFINITE);
+  CheckThreadError(GetExitCodeThread(H[0], Result));
 end;
 
 { TStream }
@@ -883,7 +936,8 @@ end;
 
 procedure TStream.SetSize(const NewSize: Int64);
 begin
-  if (NewSize < Low(Longint)) or (NewSize > High(Longint)) then Exit;
+  if (NewSize < Low(Longint)) or (NewSize > High(Longint)) then
+    Exit;
   SetSize(Longint(NewSize));
 end;
 
@@ -904,27 +958,32 @@ begin
   ClassTStream := Self.ClassType;
   while (ClassTStream <> nil) and (ClassTStream <> TStream) do
     ClassTStream := ClassTStream.ClassParent;
-  if ClassTStream = nil then RaiseException;
+  if ClassTStream = nil then
+    RaiseException;
   Base := TStream(@ClassTStream).Seek;
-  if TMethod(Impl).Code = TMethod(Base).Code then RaiseException;
+  if TMethod(Impl).Code = TMethod(Base).Code then
+    RaiseException;
   Result := Seek(Int64(Offset), TSeekOrigin(Origin));
 end;
 
 function TStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   Result := 0;
-  if (Offset < Low(Longint)) or (Offset > High(Longint)) then Exit;
+  if (Offset < Low(Longint)) or (Offset > High(Longint)) then
+    Exit;
   Result := Seek(Longint(Offset), Ord(Origin));
 end;
 
 procedure TStream.ReadBuffer(var Buffer; Count: Longint);
 begin
-  if (Count <> 0) and (Read(Buffer, Count) <> Count) then Exit;
+  if (Count <> 0) and (Read(Buffer, Count) <> Count) then
+    Exit;
 end;
 
 procedure TStream.WriteBuffer(const Buffer; Count: Longint);
 begin
-  if (Count <> 0) and (Write(Buffer, Count) <> Count) then Exit;
+  if (Count <> 0) and (Write(Buffer, Count) <> Count) then
+    Exit;
 end;
 
 function TStream.CopyFrom(Source: TStream; Count: Int64): Int64;
@@ -940,12 +999,18 @@ begin
     Count := Source.Size;
   end;
   Result := Count;
-  if Count > MaxBufSize then BufSize := MaxBufSize else BufSize := Count;
+  if Count > MaxBufSize then
+    BufSize := MaxBufSize
+  else
+    BufSize := Count;
   GetMem(Buffer, BufSize);
   try
     while Count <> 0 do
     begin
-      if Count > BufSize then N := BufSize else N := Count;
+      if Count > BufSize then
+        N := BufSize
+      else
+        N := Count;
       Source.ReadBuffer(Buffer^, N);
       WriteBuffer(Buffer^, N);
       Dec(Count, N);
@@ -1009,7 +1074,8 @@ function FileSeek(Handle: Integer; const Offset: Int64; Origin: Integer): Int64;
 begin
   Result := Offset;
   Int64Rec(Result).Lo := SetFilePointer(THandle(Handle), Int64Rec(Result).Lo, @Int64Rec(Result).Hi, Origin);
-  if (Int64Rec(Result).Lo = $FFFFFFFF) and (GetLastError <> 0) then Int64Rec(Result).Hi := $FFFFFFFF;
+  if (Int64Rec(Result).Lo = $FFFFFFFF) and (GetLastError <> 0) then
+    Int64Rec(Result).Hi := $FFFFFFFF;
 end;
 
 procedure FileClose(Handle: Integer);
@@ -1028,13 +1094,15 @@ end;
 function THandleStream.Read(var Buffer; Count: Longint): Longint;
 begin
   Result := FileRead(FHandle, Buffer, Count);
-  if Result = -1 then Result := 0;
+  if Result = -1 then
+    Result := 0;
 end;
 
 function THandleStream.Write(const Buffer; Count: Longint): Longint;
 begin
   Result := FileWrite(FHandle, Buffer, Count);
-  if Result = -1 then Result := 0;
+  if Result = -1 then
+    Result := 0;
 end;
 
 function THandleStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
@@ -1074,7 +1142,8 @@ end;
 
 destructor TFileStream.Destroy;
 begin
-  if FHandle >= 0 then FileClose(FHandle);
+  if FHandle >= 0 then
+    FileClose(FHandle);
   inherited Destroy;
 end;
 
@@ -1093,7 +1162,8 @@ begin
     Result := FSize - FPosition;
     if Result > 0 then
     begin
-      if Result > Count then Result := Count;
+      if Result > Count then
+        Result := Count;
       Move(Pointer(Longint(FMemory) + FPosition)^, Buffer, Result);
       Inc(FPosition, Result);
       Exit;
@@ -1114,7 +1184,8 @@ end;
 
 procedure TCustomMemoryStream.SaveToStream(Stream: TStream);
 begin
-  if FSize <> 0 then Stream.WriteBuffer(FMemory^, FSize);
+  if FSize <> 0 then
+    Stream.WriteBuffer(FMemory^, FSize);
 end;
 
 procedure TCustomMemoryStream.SaveToFile(const FileName: string);
@@ -1153,7 +1224,8 @@ begin
   Stream.Position := 0;
   Count := Stream.Size;
   SetSize(Count);
-  if Count <> 0 then Stream.ReadBuffer(FMemory^, Count);
+  if Count <> 0 then
+    Stream.ReadBuffer(FMemory^, Count);
 end;
 
 procedure TMemoryStream.LoadFromFile(const FileName: string);
@@ -1181,7 +1253,8 @@ begin
   OldPosition := FPosition;
   SetCapacity(NewSize);
   FSize := NewSize;
-  if OldPosition > NewSize then Seek(0, soFromEnd);
+  if OldPosition > NewSize then
+    Seek(0, soFromEnd);
 end;
 
 function TMemoryStream.Realloc(var NewCapacity: Longint): Pointer;
@@ -1195,7 +1268,8 @@ begin
     begin
       FreeMem(Memory);
       Result := nil;
-    end else
+    end
+    else
     begin
       if Capacity = 0 then
         GetMem(Result, NewCapacity)
@@ -1216,7 +1290,8 @@ begin
     begin
       if Pos > FSize then
       begin
-        if Pos > FCapacity then SetCapacity(Pos);
+        if Pos > FCapacity then
+          SetCapacity(Pos);
         FSize := Pos;
       end;
       System.Move(Buffer, Pointer(Longint(FMemory) + FPosition)^, Count);
@@ -1234,9 +1309,12 @@ begin
 end;
 
 initialization
+  SyncEvent := CreateEvent(nil, True, False, '');
   InitializeCriticalSection(ThreadLock);
 
 finalization
   DeleteCriticalSection(ThreadLock);
+  CloseHandle(SyncEvent);
 
 end.
+

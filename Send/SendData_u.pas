@@ -5,8 +5,8 @@ unit SendData_u;
 interface
 uses
   Windows, Sysutils, MyClasses, WinSock, Func_u,
-  Config_u, Protoc_u, IStats_u, Negotiate_u,
-  Participants_u, Produconsum_u, Fifo_u, SockLib_u,
+  Config_u, Protoc_u, Negotiate_u, Fifo_u,
+  Participants_u, Produconsum_u, SockLib_u,
   HouLog_u;
 
 const
@@ -73,7 +73,6 @@ type
     FDp: TDataPool;
     FConfig: PSendConfig;
     FNego: TNegotiate;
-    FStats: ISenderStats;
     FUSocket: TUDPSenderSocket;
   private
     function SendRawData(header: PAnsiChar; headerSize: Integer;
@@ -137,7 +136,6 @@ type
     { 引用 }
     FFifo: TFifo;
     FConfig: PSendConfig;
-    FStats: ISenderStats;
     FNego: TNegotiate;
   public
     constructor Create(Nego: TNegotiate);
@@ -219,7 +217,6 @@ begin
   FDp := Dp;
   FFifo := Fifo;
   FNego := Nego;
-  FStats := Nego.Stats;
   FConfig := @Nego.Config;
   FUSocket := Nego.USocket;
 end;
@@ -428,14 +425,9 @@ begin
     [i, isRetrans, FState]));
 {$ENDIF}
 
-  if (nrRetrans > 0) and Assigned(FStats) then
-    try
-      FStats.AddRetrans(nrRetrans);     //更新状态
-    except
-{$IFDEF DMC_ERROR_ON}
-      OutLog2(llError, 'FStats.AddRetrans except!');
-{$ENDIF}
-    end;
+  //统计重传块
+  if (nrRetrans > 0) then
+    Inc(PInt64(@FNego.StatsBlockRetrans)^, nrRetrans);
 end;
 
 function TSlice.SendRawData(header: PAnsiChar; headerSize: Integer;
@@ -665,7 +657,6 @@ end;
 constructor TDataPool.Create;
 begin
   FNego := Nego;
-  FStats := Nego.Stats;
   FConfig := @Nego.Config;
 end;
 
@@ -846,14 +837,8 @@ begin
 
   FreeSlice(Slice);                     //释放片
 
-  if Assigned(FStats) then
-    try
-      FStats.AddBytes(Result);          //更新状态
-    except
-{$IFDEF DMC_ERROR_ON}
-      OutLog2(llError, 'FStats.AddBytes except!');
-{$ENDIF}
-    end;
+  //统计传输总Bytes
+  Inc(PInt64(@FNego.StatsTotalBytes)^, Result);
 end;
 
 function TDataPool.FindSlice(Slice1, Slice2: TSlice; sliceNo: Integer): TSlice;
