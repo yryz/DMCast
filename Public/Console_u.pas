@@ -129,7 +129,7 @@ end;
 
 procedure TConsole.Stop();
 var
-  nBlock            : DWORD;
+  nBlock            : Integer;
 begin
   if FHandles[1] > 0 then
   begin

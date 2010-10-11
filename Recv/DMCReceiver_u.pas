@@ -29,7 +29,7 @@ type
   //填充默认配置
 procedure DMCConfigFill(var config: TRecvConfig); stdcall;
 
-//开始会话  TransStats 可以为nil
+//开始会话  OnTransStateChange 可选
 function DMCNegoCreate(config: PRecvConfig; OnTransStateChange: TOnTransStateChange;
   var lpFifo: Pointer): Pointer; stdcall;
 //结束会话

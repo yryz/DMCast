@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, MyClasses, WinSock,
-  FuncLib, Config_u, Window_u, HouLog_u;
+  FuncLib, Config_u, HouLog_u;
 
 type
   TFileWriter = class(TThread)
@@ -30,6 +30,8 @@ var
   g_TransPeriodStart: DWORD;
   g_LastPosBytes    : Int64;
 
+  g_WaitTimer       : THandle;
+
 function RunReceiver(const FileName: string): Boolean;
 
 procedure OnTransStateChange(TransState: TTransState);
@@ -49,7 +51,7 @@ const
 procedure DMCConfigFill(var config: TRecvConfig); stdcall;
   external DMC_RECEIVER_DLL;
 
-//开始会话  TransStats 可以为nil
+//开始会话  OnTransStateChange 可选
 
 function DMCNegoCreate(config: PRecvConfig; OnTransStateChange: TOnTransStateChange;
   var lpFifo: Pointer): Pointer; stdcall;
@@ -97,7 +99,6 @@ begin
       begin
         g_TransStartTime := GetTickCount;
         g_TransPeriodStart := g_TransStartTime;
-        g_StatsTimer := SetTimer(WinHandle, 0, 1000, nil);
 {$IFDEF CONSOLE}
         Writeln('Start Trans..');
 {$ENDIF}
@@ -108,14 +109,14 @@ begin
 {$IFDEF CONSOLE}
         Writeln('Transfer Complete.');
 {$ENDIF}
-        PostMessage(WinHandle, WM_QUIT, 0, 0);
+        SetEvent(g_WaitTimer);
       end;
     tsExcept:
       begin
 {$IFDEF CONSOLE}
         Writeln('Transfer Except!');
 {$ENDIF}
-        PostMessage(WinHandle, WM_QUIT, 0, 0);
+        SetEvent(g_WaitTimer);
       end;
 
     tsStop:
@@ -123,7 +124,7 @@ begin
 {$IFDEF CONSOLE}
         Writeln('Stop.');
 {$ENDIF}
-        PostMessage(WinHandle, WM_QUIT, 0, 0);
+        SetEvent(g_WaitTimer);
       end;
   end;
 end;
@@ -138,12 +139,6 @@ var
 
   bw                : Double;
 begin
-  if g_Nego = nil then
-  begin
-    KillTimer(WinHandle, g_StatsTimer);
-    Exit;
-  end;
-
   tickNow := GetTickCount;
   totalBytes := DMCStatsTotalBytes(g_Nego);
 
@@ -231,39 +226,47 @@ begin
 
   g_Nego := DMCNegoCreate(@config, OnTransStateChange, g_Fifo);
 
-  if Assigned(g_Fifo) then
-    FileWriter := TFileWriter.Create(fileName, g_Fifo);
-
-  while GetMessage(msg, 0, 0, 0) do
+  if g_Nego = nil then
   begin
-    case msg.message of
-      WM_TIMER: DoDisplayStats;
-      WM_QUIT: Break;
-    else
-      TranslateMessage(msg);
-      DispatchMessage(msg);
-    end;
+{$IFDEF EN_LOG}
+    OutLog('DMCNegoCreate Fail!');
+{$ENDIF}
+    Exit;
   end;
+
+  FileWriter := TFileWriter.Create(fileName, g_Fifo);
+
+  while WaitForSingleObject(g_WaitTimer, 1000) = WAIT_TIMEOUT do
+  begin
+    if g_TransState = tsTransing then
+      DoDisplayStats;
+  end;
+
+  FileWriter.Terminate;
 
   DMCNegoWaitEnded(g_Nego);
   DMCNegoDestroy(g_Nego);
-
-  FileWriter.WaitFor;
   FileWriter.Free;
 end;
 
-{$IFDEF EN_LOG}
 {$IFDEF CONSOLE}
 
 procedure MyOutLog2(level: TLogLevel; s: string);
 begin
   Writeln(DMC_MSG_TYPE[level], ': ', s);
 end;
+{$ENDIF}
 
 initialization
+{$IFDEF EN_LOG}
+{$IFDEF CONSOLE}
   OutLog2 := MyOutLog2;
 {$ENDIF}
 {$ENDIF}
+  g_WaitTimer := CreateEvent(nil, True, False, nil);
+
+finalization
+  CloseHandle(g_WaitTimer);
 
 end.
 

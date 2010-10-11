@@ -281,8 +281,8 @@ begin
       else
         FDp.SliceSize := FLastGoodBlocks;
 
-      if (FDp.SliceSize < MIN_SLICE_SIZE) then
-        FDp.SliceSize := MIN_SLICE_SIZE;
+      if (FDp.SliceSize < FConfig^.min_slice_size) then
+        FDp.SliceSize := FConfig^.min_slice_size;
 {$IFDEF DMC_DEBUG_ON}
       OutLog2(llDebug, Format('Slice size^.%d', [FDp.SliceSize]));
 {$ENDIF}
@@ -324,10 +324,14 @@ var
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   fecBlocks         : Integer;
 {$ENDIF}
-  nrRetrans         : Integer;
+  nrXmitBlocks      : Integer;
+
+  xmitBytes         : Integer;
+  waitTime          : Integer;
+  startTickUSec     : DWORD;
 begin
   Result := 0;
-  nrRetrans := 0;
+  nrXmitBlocks := 0;
 
   if isRetrans then
   begin
@@ -365,6 +369,26 @@ begin
   else
     rehello := -1;
 
+  //速率控制
+  if FConfig^.xmitRate > 0 then
+  begin
+    //去除自身开销
+    waitTime := DiffTickCount(FNego.XmitLastTick,
+      GetTickCountUSec div USecPerMSec);
+
+    if waitTime > 0 then
+      waitTime := FNego.XmitWaitTime - waitTime
+    else
+      waitTime := FNego.XmitWaitTime;
+
+    if (waitTime > 0) and (waitTime < 3 * 1000){最大3s} then
+    begin
+      FNego.XmitRateWait(waitTime);
+    end;
+
+    startTickUSec := GetTickCountUSec;
+  end;
+
   for i := FNextBlock to nrBlocks
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   + fecBlocks
@@ -381,7 +405,6 @@ begin
       end;
 
       SET_BIT(i, @FXmittedMap);
-      Inc(nrRetrans);
 {$IFDEF DEBUG}
       writeln(Format('Retransmitting %d.%d', [FSliceNo, i]));
 {$ENDIF}
@@ -396,6 +419,9 @@ begin
     else
       TransmitFecBlock(i - nrBlocks)
 {$ENDIF};
+
+    Inc(nrXmitBlocks);
+
     if not isRetrans and (FRc.FIncomingPC.GetProducedAmount > 0) then
       Break;                            //传输包时若有反馈消息(一般为需要重传)，先中止传输，处理
   end;                                  //end while
@@ -426,8 +452,18 @@ begin
 {$ENDIF}
 
   //统计重传块
-  if (nrRetrans > 0) then
-    Inc(PInt64(@FNego.StatsBlockRetrans)^, nrRetrans);
+  if isRetrans and (nrXmitBlocks > 0) then
+    Inc(PInt64(@FNego.StatsBlockRetrans)^, nrXmitBlocks);
+
+  //速率
+  if FConfig^.xmitRate > 0 then
+  begin
+    xmitBytes := nrXmitBlocks * FConfig^.blockSize;
+
+    FNego.XmitLastTick := GetTickCountUSec div USecPerMSec;
+    FNego.XmitWaitTime := xmitBytes div FNego.XmitRate {应该用时}
+    - DiffTickCount(startTickUSec div USecPerMSec, FNego.XmitLastTick) {实际用时};
+  end;
 end;
 
 function TSlice.SendRawData(header: PAnsiChar; headerSize: Integer;
@@ -457,7 +493,7 @@ var
   msg               : TDataBlock;
   size              : Integer;
 begin
-  assert(i < MAX_SLICE_SIZE);
+  assert(i < FConfig^.max_slice_size);
 
   msg.opCode := htons(Word(CMD_DATA));
   msg.sliceNo := htonl(FSliceNo);
@@ -699,7 +735,7 @@ begin
       FSliceSize := FConfig^.fec_stripesize * FConfig^.fec_stripes
     else
 {$ENDIF}if FNego.DmcMode = DMC_ASYNC then
-        FSliceSize := MAX_SLICE_SIZE
+        FSliceSize := FConfig^.max_slice_size
       else if dmcFullDuplex in FConfig^.flags then
         FSliceSize := 112
       else
@@ -726,7 +762,7 @@ begin
   if (FSliceSize > FConfig^.max_slice_size) then
     FSliceSize := FConfig^.max_slice_size;
 
-  assert(FSliceSize <= MAX_SLICE_SIZE);
+  assert(FSliceSize <= FConfig^.max_slice_size);
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   if LongBool(FConfig^.flags and FLAG_FEC) then

@@ -11,6 +11,7 @@ object frmCastFile: TfrmCastFile
   Font.Name = #23435#20307
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 12
@@ -302,7 +303,7 @@ object frmCastFile: TfrmCastFile
       end
       object lbl7: TLabel
         Left = 6
-        Top = 81
+        Top = 53
         Width = 75
         Height = 13
         Alignment = taRightJustify
@@ -310,9 +311,19 @@ object frmCastFile: TfrmCastFile
         Caption = #36229#26102#37325#35797#27425':'
         Transparent = True
       end
+      object lbl10: TLabel
+        Left = 144
+        Top = 53
+        Width = 98
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #20256#36755#36895#29575'(KB/s):'
+        Transparent = True
+      end
       object chkAutoSliceSize: TCheckBox
-        Left = 16
-        Top = 48
+        Left = 152
+        Top = 20
         Width = 121
         Height = 17
         Caption = #21160#24577#35843#25972#29255#22823#23567
@@ -390,8 +401,8 @@ object frmCastFile: TfrmCastFile
         end
       end
       object chkStreamMode: TCheckBox
-        Left = 144
-        Top = 48
+        Left = 16
+        Top = 83
         Width = 89
         Height = 17
         Hint = #20801#35768#25509#25910#22120#21152#20837#19968#20010#27491#22312#36827#34892#30340#20256#36755
@@ -402,15 +413,29 @@ object frmCastFile: TfrmCastFile
       end
       object seRetriesUntilDrop: TSpinEdit
         Left = 88
-        Top = 77
+        Top = 49
         Width = 49
         Height = 21
-        Hint = '0 '#20351#29992#40664#35748
         MaxLength = 4
         MaxValue = 9999
         MinValue = 10
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 4
         Value = 30
+      end
+      object seXmitRate: TSpinEdit
+        Left = 248
+        Top = 49
+        Width = 60
+        Height = 21
+        Hint = '0 '#19981#38480#36895
+        MaxValue = 0
+        MinValue = 0
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 5
+        Value = 0
       end
     end
   end

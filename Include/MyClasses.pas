@@ -893,7 +893,8 @@ begin
       if WaitResult = WAIT_OBJECT_0 + 2 then
         PeekMessage(Msg, 0, 0, 0, PM_NOREMOVE);
       WaitResult := MsgWaitForMultipleObjects(2, H, False, 1000, QS_SENDMESSAGE);
-      CheckThreadError(WaitResult <> WAIT_FAILED);
+      if WaitResult <> WAIT_FAILED then
+        Break;
       if WaitResult = WAIT_OBJECT_0 + 1 then
         CheckSynchronize;
     until WaitResult = WAIT_OBJECT_0;

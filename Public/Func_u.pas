@@ -23,17 +23,23 @@ function DiffTickCount(tOld, tNew: DWORD): DWORD; //计算活动时间差
 function GetSizeKMG(byteSize: Int64): string; //自动计算KB MB GB
 implementation
 
-function bit_isset(x: Dword; m: PByteArray): Boolean; {$IF COMPILERVERSION >17.0}inline; {$IFEND}
+function bit_isset(x: Dword; m: PByteArray): Boolean;
+{$IF COMPILERVERSION >17.0} inline;
+{$IFEND}
 begin
   Result := Boolean(m[x div 8] and (1 shl (x mod 8)));
 end;
 
-procedure set_bit(x: Dword; m: PByteArray); {$IF COMPILERVERSION >17.0}inline; {$IFEND}
+procedure set_bit(x: Dword; m: PByteArray);
+{$IF COMPILERVERSION >17.0} inline;
+{$IFEND}
 begin
   m[x div 8] := m[x div 8] or (1 shl (x mod 8));
 end;
 
-procedure clr_bit(x: Dword; m: PByteArray); {$IF COMPILERVERSION >17.0}inline; {$IFEND}
+procedure clr_bit(x: Dword; m: PByteArray);
+{$IF COMPILERVERSION >17.0} inline;
+{$IFEND}
 begin
   m[x div 8] := m[x div 8] and not (1 shl (x mod 8));
 end;
@@ -45,7 +51,8 @@ function GetTickCountUSec;              //比 GetTickCount精度高25~30毫秒
 var
   lpPerformanceCount: Int64;
 begin
-  if Frequency = 0 then begin
+  if Frequency = 0 then
+  begin
     QueryPerformanceFrequency(Frequency); //WINDOWS API 返回计数频率(Intel86:1193180)(获得系统的高性能频率计数器在一秒内的震动次数)
     Frequency := Frequency div 1000000; //一微秒内振动次数
   end;
@@ -55,8 +62,10 @@ end;
 
 function DiffTickCount;                 //计算活动时间差
 begin
-  if tNew >= tOld then Result := tNew - tOld
-  else Result := INFINITE - tOld + tNew;
+  if tNew >= tOld then
+    Result := tNew - tOld
+  else
+    Result := INFINITE - tOld + tNew;
 end;
 
 function GetSizeKMG(byteSize: Int64): string; //自动计算KB MB GB
@@ -78,7 +87,9 @@ begin
     Result := FloatToStr2(byteSize / 1024, 2) + ' KB' //format2('%.2f KB', [byteSize / 1024])
   else if byteSize < 1024 * 1024 * 1024 then
     Result := FloatToStr2(byteSize / (1024 * 1024), 2) + ' MB' //format('%.2f MB', [byteSize / (1024 * 1024)])
-  else Result := FloatToStr2(byteSize / (1024 * 1024 * 1024), 2) + ' GB'; //format('%.2f GB', [byteSize / (1024 * 1024 * 1024)]);
+  else
+    Result := FloatToStr2(byteSize / (1024 * 1024 * 1024), 2) + ' GB'; //format('%.2f GB', [byteSize / (1024 * 1024 * 1024)]);
 end;
 
 end.
+

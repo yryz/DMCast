@@ -66,6 +66,8 @@ type
     lblFileSize: TLabel;
     pb1: TProgressBar;
     tmrStats: TTimer;
+    lbl10: TLabel;
+    seXmitRate: TSpinEdit;
 
     procedure btnStartClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
@@ -74,6 +76,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure lbl8Click(Sender: TObject);
     procedure tmrStatsTimer(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     FNego: Pointer;
     FFifo: Pointer;
@@ -82,6 +85,8 @@ type
     FFileReader: TFileReader;
     procedure UpdateOnline(var Msg: TMessage); message WM_UPDATE_ONLINE;
     procedure OnAutoStop(var Msg: TMessage); message WM_AUTO_STOP;
+
+    procedure LoadSaveConfig(isLoad: Boolean);
   public
 
   end;
@@ -116,7 +121,7 @@ const
 procedure DMCConfigFill(var config: TSendConfig); stdcall;
   external DMC_SENDER_DLL;
 
-//创建会话  OnTransStateChange,OnPartsChange 可以为nil
+//创建会话  OnTransStateChange,OnPartsChange 可选
 
 function DMCNegoCreate(config: PSendConfig;
   OnTransStateChange: TOnTransStateChange;
@@ -176,6 +181,7 @@ begin
         g_TransStartTime := GetTickCount;
         g_TransPeriodStart := g_TransStartTime;
         frmCastFile.tmrStats.Enabled := True;
+        frmCastFile.btnTrans.Enabled := False; //auto trans ?
 {$IFDEF CONSOLE}
         Writeln('Start Trans..');
 {$ENDIF}
@@ -340,6 +346,7 @@ begin
     //config.net.mcastRdv:='239.0.0.1';
 
     FConfig.retriesUntilDrop := seRetriesUntilDrop.Value;
+    FConfig.xmitRate := seXmitRate.Value;
 
     if chkAutoSliceSize.Checked then
       FConfig.flags := FConfig.flags + [dmcNotFullDuplex];
@@ -402,6 +409,7 @@ end;
 procedure TfrmCastFile.FormCreate(Sender: TObject);
 begin
   pb1.DoubleBuffered := True;
+  LoadSaveConfig(True);
 end;
 
 procedure TfrmCastFile.UpdateOnline;
@@ -419,8 +427,51 @@ end;
 
 procedure TfrmCastFile.lbl8Click(Sender: TObject);
 begin
-  ShellExecute(Handle, 'open', 'http://www.yryz.net/?from=DMC',
+  ShellExecute(Handle, 'open', 'http://www.yryz.net/?from=DMCast',
     nil, nil, SW_SHOWNORMAL);
+end;
+
+procedure TfrmCastFile.LoadSaveConfig(isLoad: Boolean);
+var
+  cfgFile           : PChar;
+  szBuf             : array[0..MAX_PATH - 1] of char;
+begin
+  cfgFile := PChar(ParamStr(0));
+  StrCopy(PChar(StrRScan(cfgFile, '.') + 1), 'ini');
+  try
+    if isLoad then
+    begin
+      GetPrivateProfileString('opt', 'file', '', szBuf, MAX_PATH, cfgFile);
+      edtFile.Text := szBuf; 
+      chkLoopStart.Checked := LongBool(GetPrivateProfileInt('opt', 'loopStart', 0, cfgFile));
+      chkStreamMode.Checked := LongBool(GetPrivateProfileInt('opt', 'streamMode', 0, cfgFile));
+      seSliceSize.Value := GetPrivateProfileInt('opt', 'sliceSize', 0, cfgFile);
+      seXmitRate.Value := GetPrivateProfileInt('opt', 'xmitRate', 0, cfgFile);
+      seMaxWait.Value := GetPrivateProfileInt('opt', 'maxWaitSec', 0, cfgFile);
+      seWaitReceivers.Value := GetPrivateProfileInt('opt', 'waitReceivers', 0, cfgFile);
+      seRetriesUntilDrop.Value := GetPrivateProfileInt('opt', 'retriesUntilDrop', 30, cfgFile);
+    end
+    else
+    begin
+      WritePrivateProfileString('opt', 'file', PChar(edtFile.Text), cfgFile);
+      WritePrivateProfileString('opt', 'loopStart', PChar(IntToStr(Integer(chkLoopStart.Checked))), cfgFile);
+      WritePrivateProfileString('opt', 'streamMode', PChar(IntToStr(Integer(chkStreamMode.Checked))), cfgFile);
+      WritePrivateProfileString('opt', 'sliceSize', PChar(IntToStr(seSliceSize.Value)), cfgFile);
+      WritePrivateProfileString('opt', 'xmitRate', PChar(IntToStr(seXmitRate.Value)), cfgFile);
+      WritePrivateProfileString('opt', 'maxWaitSec', PChar(IntToStr(seMaxWait.Value)), cfgFile);
+      WritePrivateProfileString('opt', 'waitReceivers', PChar(IntToStr(seWaitReceivers.Value)), cfgFile);
+      WritePrivateProfileString('opt', 'retriesUntilDrop', PChar(IntToStr(seRetriesUntilDrop.Value)), cfgFile);
+    end;
+  except
+    on E: Exception do
+      OutDebug('处理配置文件异常!' + E.Message);
+  end;
+end;
+
+procedure TfrmCastFile.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  LoadSaveConfig(False);
 end;
 
 end.

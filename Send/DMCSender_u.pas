@@ -30,7 +30,7 @@ type
   //填充默认配置
 procedure DMCConfigFill(var config: TSendConfig); stdcall;
 
-//创建会话  OnTransStateChange,OnPartsChange 可以为nil
+//创建会话  OnTransStateChange,OnPartsChange 可选
 function DMCNegoCreate(config: PSendConfig;
   OnTransStateChange: TOnTransStateChange;
   OnPartsChange: TOnPartsChange;
@@ -260,6 +260,7 @@ begin
   inherited Terminate;
 
   try
+    FNego.StopNegotiate;
     if Assigned(FSender) then
     begin
       FSender.Terminated := True;
@@ -267,9 +268,7 @@ begin
       FNego.USocket.Close;
       FRc.Terminate;
       FIo.Close;
-    end
-    else                                //会话期?
-      FNego.StopNegotiate;
+    end;
   except
   end;
 end;

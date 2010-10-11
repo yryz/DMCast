@@ -125,6 +125,11 @@ type
     }
     retriesUntilDrop: Integer;          //sendReqack片重试次数(默认30)
 
+    {
+     传输速率控制(KB/s),默认0 不限制
+    }
+    xmitRate: Integer;
+
     { FEC config }
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     fec_redundancy: Integer;            { how much fec blocks are added per group }
