@@ -9,11 +9,11 @@ uses
 type
   TSenderThread = class(TThread)
   private
-    FDp: TDataPool;
     FRc: TRChannel;
     FSender: TSender;
   protected
     FIo: TFifo;
+    FDp: TDataPool;
     FNego: TNegotiate;
   protected
     procedure Execute; override;
@@ -44,9 +44,11 @@ function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall
 //数据生产完成
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
 
-//开始传输(信号)
-function DMCDoTransfer(lpNego: Pointer): Boolean; stdcall;
+//开始/暂停传输(信号)
+function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean; stdcall;
 
+//统计片大小
+function DMCStatsSliceSize(lpNego: Pointer): Integer; stdcall;
 //统计已经传输Bytes
 function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
 //统计重传Blocks(块)
@@ -160,11 +162,11 @@ begin
   end;
 end;
 
-function DMCDoTransfer(lpNego: Pointer): Boolean;
+function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean;
 begin
   Result := True;
   try
-    TSenderThread(lpNego).FNego.PostDoTransfer;
+    TSenderThread(lpNego).FNego.TransferCtrl(isGo);
   except on e: Exception do
     begin
       Result := False;
@@ -175,7 +177,24 @@ begin
   end;
 end;
 
-function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
+function DMCStatsSliceSize(lpNego: Pointer): Integer;
+begin
+  try
+    if Assigned(TSenderThread(lpNego).FDp) then
+      Result := TSenderThread(lpNego).FDp.SliceSize
+    else
+      Result := 0;
+  except on e: Exception do
+    begin
+      Result := -1;
+{$IFDEF EN_LOG}
+      OutLog2(llError, e.Message);
+{$ENDIF}
+    end;
+  end;
+end;
+
+function DMCStatsTotalBytes(lpNego: Pointer): Int64;
 begin
   try
     Result := TSenderThread(lpNego).FNego.StatsTotalBytes;
@@ -189,7 +208,7 @@ begin
   end;
 end;
 
-function DMCStatsBlockRetrans(lpNego: Pointer): Int64; stdcall;
+function DMCStatsBlockRetrans(lpNego: Pointer): Int64;
 begin
   try
     Result := TSenderThread(lpNego).FNego.StatsBlockRetrans;

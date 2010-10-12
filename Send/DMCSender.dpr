@@ -12,7 +12,8 @@ exports
   DMCNegoDestroy,
   DMCDataWriteWait,
   DMCDataWrited,
-  DMCDoTransfer,
+  DMCTransferCtrl,
+  DMCStatsSliceSize,
   DMCStatsTotalBytes,
   DMCStatsBlockRetrans;
 

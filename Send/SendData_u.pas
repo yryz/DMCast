@@ -370,7 +370,7 @@ begin
     rehello := -1;
 
   //速率控制
-  if FConfig^.xmitRate > 0 then
+  if FNego.XmitRate > 0 then
   begin
     //去除自身开销
     waitTime := DiffTickCount(FNego.XmitLastTick,
@@ -381,7 +381,7 @@ begin
     else
       waitTime := FNego.XmitWaitTime;
 
-    if (waitTime > 0) and (waitTime < 3 * 1000){最大3s} then
+    if (waitTime > 0) and (waitTime < 3 * 1000) {最大3s} then
     begin
       FNego.XmitRateWait(waitTime);
     end;
@@ -414,10 +414,16 @@ begin
       FNego.SendHello(True);            //流模式
 
     if i < nrBlocks then
-      TransmitDataBlock(i)
+    begin
+      if TransmitDataBlock(i) < 0 then
+        Break;
+    end
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
     else
-      TransmitFecBlock(i - nrBlocks)
+    begin
+      if TransmitFecBlock(i - nrBlocks) < 0 then
+        Break;
+    end;
 {$ENDIF};
 
     Inc(nrXmitBlocks);
@@ -456,7 +462,7 @@ begin
     Inc(PInt64(@FNego.StatsBlockRetrans)^, nrXmitBlocks);
 
   //速率
-  if FConfig^.xmitRate > 0 then
+  if FNego.XmitRate > 0 then
   begin
     xmitBytes := nrXmitBlocks * FConfig^.blockSize;
 
@@ -476,7 +482,6 @@ begin
   msg.data.base := data;
   msg.data.len := dataSize;
 
-  ////rgWaitAll(config, sock, FUSocket.CastAddr.sin_addr.s_addr, dataSize + headerSize);
   Result := FUSocket.SendDataMsg(msg);
 {$IFDEF DMC_ERROR_ON}
   if Result < 0 then
@@ -493,8 +498,6 @@ var
   msg               : TDataBlock;
   size              : Integer;
 begin
-  assert(i < FConfig^.max_slice_size);
-
   msg.opCode := htons(Word(CMD_DATA));
   msg.sliceNo := htonl(FSliceNo);
   msg.blockNo := htons(i);
@@ -734,7 +737,7 @@ begin
     if LongBool(FConfig^.flags and FLAG_FEC) then
       FSliceSize := FConfig^.fec_stripesize * FConfig^.fec_stripes
     else
-{$ENDIF}if FNego.DmcMode = DMC_ASYNC then
+{$ENDIF}if LongBool(FNego.DmcMode and (DMC_ASYNC or DMC_FEC)) then
         FSliceSize := FConfig^.max_slice_size
       else if dmcFullDuplex in FConfig^.flags then
         FSliceSize := 112
@@ -761,8 +764,6 @@ begin
 
   if (FSliceSize > FConfig^.max_slice_size) then
     FSliceSize := FConfig^.max_slice_size;
-
-  assert(FSliceSize <= FConfig^.max_slice_size);
 
 {$IFDEF BB_FEATURE_UDPCAST_FEC}
   if LongBool(FConfig^.flags and FLAG_FEC) then
@@ -1078,11 +1079,16 @@ begin
   FNego.TransState := tsTransing;
   while not FTerminated do
   begin
-    if FNego.DmcMode = DMC_ASYNC then   // ASYNC
+    if LongBool(FNego.DmcMode and (DMC_ASYNC or DMC_FEC)) then // ASYNC
     begin
       if (xmitSlice <> nil) then
       begin                             // 直接确认，释放
         FDp.AckSlice(xmitSlice);
+        if atEnd then
+        begin
+          xmitSlice.Reqack;             //结束信号
+          Break;
+        end;
         xmitSlice := nil;
       end;
     end
@@ -1139,6 +1145,7 @@ begin
 
     if (xmitSlice <> nil) and (xmitSlice.State = SLICE_NEW) then
     begin                               // 发送xmitSlice (有可能是传输过，但没传输完)
+      FNego.WaitForCtrl;
       xmitSlice.Send(False);
 {$IFDEF DEBUG}
       Writeln(Format('%d Interrupted at %d / %d', xmitSlice^.sliceNo,

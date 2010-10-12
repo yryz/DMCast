@@ -134,7 +134,7 @@ var
   hOut              : THandle;
   conBuf            : TConsoleScreenBufferInfo;
 
-  totalBytes        : Int64;
+  totalBytes, bwBytes: Int64;
   tickNow, tdiff    : DWORD;
 
   bw                : Double;
@@ -142,11 +142,20 @@ begin
   tickNow := GetTickCount;
   totalBytes := DMCStatsTotalBytes(g_Nego);
 
-  tdiff := DiffTickCount(g_TransStartTime, tickNow);
+  if g_TransState = tsTransing then
+  begin
+    tdiff := DiffTickCount(g_TransPeriodStart, tickNow);
+    bwBytes := totalBytes - g_LastPosBytes;
+  end
+  else
+  begin
+    tdiff := DiffTickCount(g_TransStartTime, tickNow);
+    bwBytes := totalBytes;
+  end;
   if tdiff = 0 then
     tdiff := 1;
   //平均带宽统计
-  bw := totalBytes * 1000 / tdiff;      // Byte/s
+  bw := bwBytes * 1000 / tdiff;         // Byte/s
 
   //显示状态
 {$IFDEF CONSOLE}
@@ -209,7 +218,6 @@ end;
 
 function RunReceiver(const FileName: string): Boolean;
 var
-  msg               : TMsg;
   config            : TRecvConfig;
   FileWriter        : TFileWriter;
 begin
@@ -253,7 +261,7 @@ end;
 
 procedure MyOutLog2(level: TLogLevel; s: string);
 begin
-  Writeln(DMC_MSG_TYPE[level], ': ', s);
+  Writeln(LOG_MSG_TYPE[level], ': ', s);
 end;
 {$ENDIF}
 

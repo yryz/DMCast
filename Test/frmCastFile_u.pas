@@ -68,6 +68,10 @@ type
     tmrStats: TTimer;
     lbl10: TLabel;
     seXmitRate: TSpinEdit;
+    cbbInterface: TComboBox;
+    lbl11: TLabel;
+    lbl12: TLabel;
+    lblTotalTime: TLabel;
 
     procedure btnStartClick(Sender: TObject);
     procedure SpeedButton1Click(Sender: TObject);
@@ -77,6 +81,7 @@ type
     procedure lbl8Click(Sender: TObject);
     procedure tmrStatsTimer(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure SpinEditChange(Sender: TObject);
   private
     FNego: Pointer;
     FFifo: Pointer;
@@ -87,6 +92,7 @@ type
     procedure OnAutoStop(var Msg: TMessage); message WM_AUTO_STOP;
 
     procedure LoadSaveConfig(isLoad: Boolean);
+    procedure GetAllInterface;
   public
 
   end;
@@ -144,9 +150,14 @@ function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
   external DMC_SENDER_DLL;
 
-//开始传输(信号)
+//开始/暂停传输(信号)
 
-function DMCDoTransfer(lpNego: Pointer): Boolean; stdcall;
+function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean; stdcall;
+  external DMC_SENDER_DLL;
+
+//统计片大小
+
+function DMCStatsSliceSize(lpNego: Pointer): Integer; stdcall;
   external DMC_SENDER_DLL;
 
 //统计已经传输Bytes
@@ -181,7 +192,8 @@ begin
         g_TransStartTime := GetTickCount;
         g_TransPeriodStart := g_TransStartTime;
         frmCastFile.tmrStats.Enabled := True;
-        frmCastFile.btnTrans.Enabled := False; //auto trans ?
+        //auto trans ?
+        frmCastFile.btnTransClick(nil);
 {$IFDEF CONSOLE}
         Writeln('Start Trans..');
 {$ENDIF}
@@ -282,7 +294,7 @@ end;
 
 procedure TfrmCastFile.tmrStatsTimer(Sender: TObject);
 var
-  totalBytes        : Int64;
+  totalBytes, bwBytes: Int64;
   tickNow, tdiff    : DWORD;
   rexmitBlocks      : dword;
   bw, percent       : double;
@@ -299,11 +311,20 @@ begin
   tickNow := GetTickCount;
   totalBytes := DMCStatsTotalBytes(FNego);
 
-  tdiff := DiffTickCount(g_TransStartTime, tickNow);
+  if g_TransState = tsTransing then
+  begin
+    tdiff := DiffTickCount(g_TransPeriodStart, tickNow);
+    bwBytes := totalBytes - g_LastPosBytes;
+  end
+  else
+  begin
+    tdiff := DiffTickCount(g_TransStartTime, tickNow);
+    bwBytes := totalBytes;
+  end;
   if tdiff = 0 then
     tdiff := 1;
   //平均带宽统计
-  bw := totalBytes * 1000 / tdiff;      // Byte/s
+  bw := bwBytes * 1000 / tdiff;         // Byte/s
 
   //重传块统计
   rexmitBlocks := DMCStatsBlockRetrans(FNego);
@@ -318,6 +339,9 @@ begin
   lblTransBytes.Caption := GetSizeKMG(totalBytes);
   lblSpeed.Caption := GetSizeKMG(Trunc(bw)) + '/s';
   lblRexmit.Caption := Format('%d(%.2f%%)', [rexmitBlocks, percent]);
+  lblSliceSize.Caption := IntToStr(DMCStatsSliceSize(FNego));
+  if g_TransState = tsTransing then
+    lblTotalTime.Caption := MSecondToTimeStr(DiffTickCount(g_TransStartTime, tickNow));
 
   g_LastPosBytes := totalBytes;
   g_TransPeriodStart := GetTickCount;
@@ -341,6 +365,9 @@ begin
 
     //默认配置
     DMCConfigFill(FConfig);
+    if cbbInterface.ItemIndex > 0 then
+      FConfig.net.ifName := PAnsiChar(cbbInterface.Text);
+    //FConfig.dmcMode:=dmcAsyncMode;
     if chkStreamMode.Checked then
       FConfig.dmcMode := dmcStreamMode;
     //config.net.mcastRdv:='239.0.0.1';
@@ -391,6 +418,11 @@ begin
 
   btnStart.Enabled := g_TransState = tsStop;
   btnTrans.Enabled := not btnStart.Enabled;
+  if btnTrans.Enabled then
+  begin
+    btnTrans.Caption := '传输';
+    btnTrans.Tag := 0;
+  end;
 
   //循环模式
   if btnStart.Enabled and chkLoopStart.Checked then
@@ -399,16 +431,46 @@ end;
 
 procedure TfrmCastFile.btnTransClick(Sender: TObject);
 begin
-  if Assigned(FNego) then
-    DMCDoTransfer(FNego)
-  else
+  if FNego = nil then
+  begin
     btnStopClick(nil);
-  btnTrans.Enabled := False;
+    Exit;
+  end;
+
+  if not Assigned(Sender) then          //auto start?
+  begin
+    btnTrans.Caption := '暂停';
+    btnTrans.Tag := 1;
+    Exit;
+  end;
+
+  with TButton(Sender) do
+    case Tag of
+      0:
+        begin
+          DMCTransferCtrl(FNego, True);
+          Caption := '暂停';
+          Tag := 1;
+        end;
+      1:
+        begin
+          DMCTransferCtrl(FNego, False);
+          Caption := '继续';
+          Tag := 2;
+        end;
+      2:
+        begin
+          DMCTransferCtrl(FNego, True);
+          Caption := '暂停';
+          Tag := 1;
+        end;
+    end;
 end;
 
 procedure TfrmCastFile.FormCreate(Sender: TObject);
 begin
   pb1.DoubleBuffered := True;
+  GetAllInterface;
   LoadSaveConfig(True);
 end;
 
@@ -427,8 +489,32 @@ end;
 
 procedure TfrmCastFile.lbl8Click(Sender: TObject);
 begin
-  ShellExecute(Handle, 'open', 'http://www.yryz.net/?from=DMCast',
+  ShellExecute(Handle, 'open', PChar('http://www.yryz.net/?from=DMCast_' + Caption),
     nil, nil, SW_SHOWNORMAL);
+end;
+
+procedure TfrmCastFile.GetAllInterface;
+var
+  phe               : PHostEnt;
+  lpHost            : array[0..15] of Char;
+  lpInAddr          : ^PInAddr;
+begin
+  with cbbInterface.Items do
+  begin
+    Clear;
+    getHostName(lpHost, SizeOf(lpHost));
+    phe := GetHostByName(lpHost);
+    if Assigned(phe) then
+    begin
+      lpInAddr := Pointer(phe^.h_addr_list);
+      repeat
+        Add(inet_ntoa(lpInAddr^^));
+        Inc(lpInAddr);
+      until lpInAddr^ = nil;
+    end;
+    if Count > 0 then
+      Insert(0, '::所有网络接口::');
+  end;
 end;
 
 procedure TfrmCastFile.LoadSaveConfig(isLoad: Boolean);
@@ -442,9 +528,10 @@ begin
     if isLoad then
     begin
       GetPrivateProfileString('opt', 'file', '', szBuf, MAX_PATH, cfgFile);
-      edtFile.Text := szBuf; 
+      edtFile.Text := szBuf;
       chkLoopStart.Checked := LongBool(GetPrivateProfileInt('opt', 'loopStart', 0, cfgFile));
       chkStreamMode.Checked := LongBool(GetPrivateProfileInt('opt', 'streamMode', 0, cfgFile));
+      cbbInterface.ItemIndex := GetPrivateProfileInt('opt', 'ifIndex', 0, cfgFile);
       seSliceSize.Value := GetPrivateProfileInt('opt', 'sliceSize', 0, cfgFile);
       seXmitRate.Value := GetPrivateProfileInt('opt', 'xmitRate', 0, cfgFile);
       seMaxWait.Value := GetPrivateProfileInt('opt', 'maxWaitSec', 0, cfgFile);
@@ -456,6 +543,7 @@ begin
       WritePrivateProfileString('opt', 'file', PChar(edtFile.Text), cfgFile);
       WritePrivateProfileString('opt', 'loopStart', PChar(IntToStr(Integer(chkLoopStart.Checked))), cfgFile);
       WritePrivateProfileString('opt', 'streamMode', PChar(IntToStr(Integer(chkStreamMode.Checked))), cfgFile);
+      WritePrivateProfileString('opt', 'ifIndex', PChar(IntToStr(cbbInterface.ItemIndex)), cfgFile);
       WritePrivateProfileString('opt', 'sliceSize', PChar(IntToStr(seSliceSize.Value)), cfgFile);
       WritePrivateProfileString('opt', 'xmitRate', PChar(IntToStr(seXmitRate.Value)), cfgFile);
       WritePrivateProfileString('opt', 'maxWaitSec', PChar(IntToStr(seMaxWait.Value)), cfgFile);
@@ -472,6 +560,12 @@ procedure TfrmCastFile.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
   LoadSaveConfig(False);
+end;
+
+procedure TfrmCastFile.SpinEditChange(Sender: TObject);
+begin
+  if (TSpinEdit(Sender).Text <> '') and (TSpinEdit(Sender).Value < 0) then
+    TSpinEdit(Sender).Value := 0;
 end;
 
 end.

@@ -6,7 +6,7 @@ interface
 uses
   Windows, Sysutils, WinSock, Func_u,
   Config_u, Protoc_u, SockLib_u, Console_u,
-  Participants_u, HouLog_u;
+  Participants_u, Route_u, HouLog_u;
 
 const
   USecPerMSec       = 1000;
@@ -37,6 +37,11 @@ type
     FXmitWaitTime: Integer;             //传输等待时间(ms)
     FXmitLastTick: DWORD;               //最后传输片的时间(ms)(用于计算程序自身开销)
     FXmitRateTimer: THandle;
+
+    { 传输控制 }
+    FCtrlWaitHandle: THandle;
+
+    procedure XmitRateSet(kb: Integer); //限速设置(kb/s)
   private
     //单点模式?
     function IsPointToPoint(): Boolean;
@@ -54,7 +59,9 @@ type
     //会话控制
     function StartNegotiate(): Integer;
     function StopNegotiate(): Boolean;
-    function PostDoTransfer(): Boolean;
+    //控制(暂停/继续)
+    procedure WaitForCtrl();
+    procedure TransferCtrl(isGo: Boolean);
 
     //Hello
     function SendHello(streaming: Boolean): Integer;
@@ -83,7 +90,6 @@ type
     property Config: TSendConfig read FConfig;
     property USocket: TUDPSenderSocket read FUSocket;
     property Parts: TParticipants read FParts;
-
   end;
 
 implementation
@@ -93,32 +99,7 @@ implementation
 constructor TNegotiate.Create;
 var
   tryFullDuplex     : Boolean;
-  xmitRateBytes     : Integer;
-  xmitRateBlocks    : Integer;
 begin
-  { 速率配置 }
-  if config^.xmitRate > 0 then
-  begin
-    xmitRateBytes := config^.xmitRate * 1024; //byte/s
-    FXmitRate := xmitRateBytes div 1000; //byte/ms
-
-    xmitRateBlocks := xmitRateBytes div config^.blockSize;
-    if xmitRateBlocks < 1 then
-      xmitRateBlocks := 1;
-
-    if config^.min_slice_size > xmitRateBlocks then
-      config^.min_slice_size := xmitRateBlocks;
-
-    if config^.default_slice_size > xmitRateBlocks then
-      config^.default_slice_size := xmitRateBlocks;
-
-    if config^.max_slice_size > xmitRateBlocks then
-      config^.max_slice_size := xmitRateBlocks;
-
-    //Timer
-    FXmitRateTimer := CreateWaitableTimer(nil, False, nil);
-  end;
-
   { Copy Config }
   Move(config^, FConfig, SizeOf(FConfig));
 
@@ -134,6 +115,10 @@ begin
     dmcFecMode: FDmcMode := DMC_FEC;
   end;
   FCapabilities := SENDER_CAPABILITIES;
+
+  XmitRateSet(config^.xmitRate);
+
+  FCtrlWaitHandle := CreateEvent(nil, True, True, nil);
 
   { make the socket and print banner }
   tryFullDuplex := not (dmcFullDuplex in FConfig.flags)
@@ -168,6 +153,8 @@ begin
     FConsole.Free;
   if FXmitRateTimer > 0 then
     CloseHandle(FXmitRateTimer);
+  if FCtrlWaitHandle > 0 then
+    CloseHandle(FCtrlWaitHandle);
   inherited;
 end;
 
@@ -410,10 +397,12 @@ function TNegotiate.StopNegotiate: Boolean;
 begin
   Result := not FAbort;
   FAbort := True;
-  if Assigned(FConsole) then
-    Result := FConsole.PostPressed;
-  CloseHandle(FXmitRateTimer);
-  FXmitRateTimer := 0;
+  TransferCtrl(True);
+  if FXmitRateTimer > 0 then
+  begin
+    CloseHandle(FXmitRateTimer);
+    FXmitRateTimer := 0;
+  end;
 end;
 
 procedure TNegotiate.BeginTrans();
@@ -461,6 +450,15 @@ begin
         OutLog2(llMsg, 'Reset control to ' + inet_ntoa(FUSocket.CtrlAddr.sin_addr));
 {$ENDIF}
       end;
+    end
+    else
+    begin
+      if FUSocket.IsMCastAddress(@FUSocket.DataAddr) then
+      begin                             //设置组播路由，解决ADSL组播问题
+        DeleteIpRoute(FUSocket.DataAddr.sin_addr.S_addr);
+        SetLocalRoute(FUSocket.DataAddr.sin_addr.S_addr, $FFFFFFFF,
+          FUSocket.NetIf.addr.S_addr);
+      end;
     end;
   end;
 end;
@@ -470,16 +468,42 @@ begin
   FParts.Clear();
 end;
 
-function TNegotiate.PostDoTransfer: Boolean;
-begin
-  Result := FConsole.PostPressed;
-end;
-
 procedure TNegotiate.SetTransState(const Value: TTransState);
 begin
   FTransState := Value;
   if Assigned(FOnTransStateChange) then
     FOnTransStateChange(Value);
+end;
+
+procedure TNegotiate.XmitRateSet(kb: Integer);
+var
+  xmitRateBytes     : Integer;
+  xmitRateBlocks    : Integer;
+begin
+  if kb > 0 then
+  begin
+    xmitRateBytes := kb * 1024;         //byte/s
+    FXmitRate := xmitRateBytes div 1000; //byte/ms
+
+    xmitRateBlocks := xmitRateBytes div FConfig.blockSize;
+    if xmitRateBlocks < 1 then
+      xmitRateBlocks := 1;
+
+    if FConfig.min_slice_size > xmitRateBlocks then
+      FConfig.min_slice_size := xmitRateBlocks;
+
+    if FConfig.default_slice_size > xmitRateBlocks then
+      FConfig.default_slice_size := xmitRateBlocks;
+
+    if FConfig.max_slice_size > xmitRateBlocks then
+      FConfig.max_slice_size := xmitRateBlocks;
+
+    //Timer
+    if FXmitRateTimer = 0 then
+      FXmitRateTimer := CreateWaitableTimer(nil, False, nil);
+  end
+  else
+    FXmitRate := 0;
 end;
 
 procedure TNegotiate.XmitRateWait(ms: DWORD);
@@ -490,6 +514,23 @@ begin
   SetWaitableTimer(FXmitRateTimer, lpDueTime, 1, nil, nil, True);
 
   WaitForSingleObject(FXmitRateTimer, INFINITE);
+end;
+
+procedure TNegotiate.WaitForCtrl;
+begin
+  WaitForSingleObject(FCtrlWaitHandle, INFINITE);
+end;
+
+procedure TNegotiate.TransferCtrl(isGo: Boolean);
+begin
+  if isGo then
+  begin
+    SetEvent(FCtrlWaitHandle);
+    if Assigned(FConsole) then
+      FConsole.PostPressed;
+  end
+  else
+    ResetEvent(FCtrlWaitHandle);
 end;
 
 end.

@@ -96,7 +96,7 @@ PackageDLLOutputDir=
 PackageDCPOutputDir=
 SearchPath=..\Include;..\Public;..\Recv
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
-Conditionals=EN_LOG
+Conditionals=
 DebugSourceDirs=
 UsePackages=0
 [Parameters]

@@ -2,7 +2,7 @@ object frmCastFile: TfrmCastFile
   Left = 216
   Top = 137
   Width = 645
-  Height = 421
+  Height = 398
   Caption = #25991#20214#22810#25773' v1.0a'
   Color = clBtnFace
   Font.Charset = ANSI_CHARSET
@@ -11,13 +11,14 @@ object frmCastFile: TfrmCastFile
   Font.Name = #23435#20307
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 12
   object stat1: TStatusBar
     Left = 0
-    Top = 368
+    Top = 345
     Width = 637
     Height = 19
     Panels = <
@@ -27,9 +28,9 @@ object frmCastFile: TfrmCastFile
   end
   object lvClient: TListView
     Left = 0
-    Top = 65
+    Top = 74
     Width = 312
-    Height = 285
+    Height = 271
     Align = alClient
     Columns = <
       item
@@ -54,7 +55,7 @@ object frmCastFile: TfrmCastFile
     Left = 0
     Top = 0
     Width = 637
-    Height = 65
+    Height = 56
     Align = alTop
     BevelOuter = bvNone
     ParentBackground = False
@@ -98,7 +99,6 @@ object frmCastFile: TfrmCastFile
       Height = 20
       ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
       TabOrder = 0
-      Text = 'F:\sys\W98plus2.rar'
     end
     object btnTrans: TButton
       Left = 336
@@ -140,9 +140,9 @@ object frmCastFile: TfrmCastFile
   end
   object pnl1: TPanel
     Left = 312
-    Top = 65
+    Top = 74
     Width = 325
-    Height = 285
+    Height = 271
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
@@ -151,14 +151,14 @@ object frmCastFile: TfrmCastFile
       Left = 0
       Top = 0
       Width = 325
-      Height = 124
+      Height = 108
       Align = alTop
       Caption = #29366#24577
       TabOrder = 0
       object lbl1: TLabel
-        Left = 8
-        Top = 45
-        Width = 67
+        Left = 160
+        Top = 24
+        Width = 64
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
@@ -167,8 +167,8 @@ object frmCastFile: TfrmCastFile
       end
       object lbl2: TLabel
         Left = 8
-        Top = 66
-        Width = 67
+        Top = 49
+        Width = 64
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
@@ -176,9 +176,9 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lbl3: TLabel
-        Left = 8
-        Top = 88
-        Width = 67
+        Left = 160
+        Top = 75
+        Width = 64
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
@@ -186,19 +186,18 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lbl4: TLabel
-        Left = 164
-        Top = 15
-        Width = 67
+        Left = 8
+        Top = 75
+        Width = 64
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
         Caption = #29255#22823#23567':'
         Transparent = True
-        Visible = False
       end
       object lblSliceSize: TLabel
-        Left = 239
-        Top = 15
+        Left = 79
+        Top = 75
         Width = 80
         Height = 13
         AutoSize = False
@@ -210,11 +209,10 @@ object frmCastFile: TfrmCastFile
         Font.Style = []
         ParentFont = False
         Transparent = True
-        Visible = False
       end
       object lblRexmit: TLabel
-        Left = 83
-        Top = 88
+        Left = 231
+        Top = 75
         Width = 80
         Height = 13
         AutoSize = False
@@ -228,8 +226,8 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lblSpeed: TLabel
-        Left = 83
-        Top = 66
+        Left = 79
+        Top = 49
         Width = 80
         Height = 13
         AutoSize = False
@@ -243,8 +241,8 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lblTransBytes: TLabel
-        Left = 83
-        Top = 45
+        Left = 231
+        Top = 24
         Width = 80
         Height = 13
         AutoSize = False
@@ -260,7 +258,7 @@ object frmCastFile: TfrmCastFile
       object lblFile: TLabel
         Left = 8
         Top = 24
-        Width = 67
+        Width = 64
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
@@ -268,8 +266,33 @@ object frmCastFile: TfrmCastFile
         Transparent = True
       end
       object lblFileSize: TLabel
-        Left = 83
+        Left = 79
         Top = 24
+        Width = 80
+        Height = 13
+        AutoSize = False
+        Caption = '0'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clGreen
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = []
+        ParentFont = False
+        Transparent = True
+      end
+      object lbl12: TLabel
+        Left = 160
+        Top = 49
+        Width = 64
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #24050#29992#26102#38388':'
+        Transparent = True
+      end
+      object lblTotalTime: TLabel
+        Left = 231
+        Top = 49
         Width = 80
         Height = 13
         AutoSize = False
@@ -285,15 +308,15 @@ object frmCastFile: TfrmCastFile
     end
     object grp2: TGroupBox
       Left = 0
-      Top = 124
+      Top = 108
       Width = 325
-      Height = 161
+      Height = 163
       Align = alClient
       Caption = #35774#32622
       TabOrder = 1
       object lbl5: TLabel
         Left = 6
-        Top = 22
+        Top = 59
         Width = 75
         Height = 13
         Alignment = taRightJustify
@@ -303,7 +326,7 @@ object frmCastFile: TfrmCastFile
       end
       object lbl7: TLabel
         Left = 6
-        Top = 53
+        Top = 90
         Width = 75
         Height = 13
         Alignment = taRightJustify
@@ -313,7 +336,7 @@ object frmCastFile: TfrmCastFile
       end
       object lbl10: TLabel
         Left = 144
-        Top = 53
+        Top = 90
         Width = 98
         Height = 13
         Alignment = taRightJustify
@@ -321,9 +344,19 @@ object frmCastFile: TfrmCastFile
         Caption = #20256#36755#36895#29575'(KB/s):'
         Transparent = True
       end
+      object lbl11: TLabel
+        Left = 6
+        Top = 27
+        Width = 75
+        Height = 13
+        Alignment = taRightJustify
+        AutoSize = False
+        Caption = #20256#36755#30340#25509#21475':'
+        Transparent = True
+      end
       object chkAutoSliceSize: TCheckBox
-        Left = 152
-        Top = 20
+        Left = 153
+        Top = 57
         Width = 121
         Height = 17
         Caption = #21160#24577#35843#25972#29255#22823#23567
@@ -331,7 +364,7 @@ object frmCastFile: TfrmCastFile
       end
       object seSliceSize: TSpinEdit
         Left = 88
-        Top = 18
+        Top = 55
         Width = 49
         Height = 21
         Hint = '0 '#20351#29992#40664#35748
@@ -345,7 +378,7 @@ object frmCastFile: TfrmCastFile
       end
       object grp4: TGroupBox
         Left = 2
-        Top = 115
+        Top = 117
         Width = 321
         Height = 44
         Align = alBottom
@@ -354,15 +387,15 @@ object frmCastFile: TfrmCastFile
         object lbl6: TLabel
           Left = 4
           Top = 20
-          Width = 62
+          Width = 75
           Height = 13
           Alignment = taRightJustify
           AutoSize = False
-          Caption = #23458#25143#31471#25968':'
+          Caption = #31561#24453#23458#25143#25968':'
           Transparent = True
         end
         object lbl9: TLabel
-          Left = 144
+          Left = 150
           Top = 20
           Width = 90
           Height = 13
@@ -372,7 +405,7 @@ object frmCastFile: TfrmCastFile
           Transparent = True
         end
         object seWaitReceivers: TSpinEdit
-          Left = 68
+          Left = 86
           Top = 16
           Width = 49
           Height = 21
@@ -386,13 +419,12 @@ object frmCastFile: TfrmCastFile
           Value = 0
         end
         object seMaxWait: TSpinEdit
-          Left = 244
+          Left = 246
           Top = 16
-          Width = 49
+          Width = 60
           Height = 21
           Hint = #26377#19968#20010#23458#25143#31471#21518','#20877#31561#24453#22810#38271#26102#38388#12290'0 '#24573#30053
-          MaxLength = 4
-          MaxValue = 1024
+          MaxValue = 0
           MinValue = 0
           ParentShowHint = False
           ShowHint = True
@@ -401,8 +433,8 @@ object frmCastFile: TfrmCastFile
         end
       end
       object chkStreamMode: TCheckBox
-        Left = 16
-        Top = 83
+        Left = 228
+        Top = 25
         Width = 89
         Height = 17
         Hint = #20801#35768#25509#25910#22120#21152#20837#19968#20010#27491#22312#36827#34892#30340#20256#36755
@@ -413,7 +445,7 @@ object frmCastFile: TfrmCastFile
       end
       object seRetriesUntilDrop: TSpinEdit
         Left = 88
-        Top = 49
+        Top = 86
         Width = 49
         Height = 21
         MaxLength = 4
@@ -423,10 +455,11 @@ object frmCastFile: TfrmCastFile
         ShowHint = True
         TabOrder = 4
         Value = 30
+        OnChange = SpinEditChange
       end
       object seXmitRate: TSpinEdit
         Left = 248
-        Top = 49
+        Top = 86
         Width = 60
         Height = 21
         Hint = '0 '#19981#38480#36895
@@ -436,15 +469,28 @@ object frmCastFile: TfrmCastFile
         ShowHint = True
         TabOrder = 5
         Value = 0
+        OnChange = SpinEditChange
+      end
+      object cbbInterface: TComboBox
+        Left = 88
+        Top = 23
+        Width = 124
+        Height = 20
+        Style = csDropDownList
+        ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
+        ItemHeight = 12
+        ParentShowHint = False
+        ShowHint = False
+        TabOrder = 6
       end
     end
   end
   object pb1: TProgressBar
     Left = 0
-    Top = 350
+    Top = 56
     Width = 637
     Height = 18
-    Align = alBottom
+    Align = alTop
     ParentShowHint = False
     ShowHint = True
     TabOrder = 4

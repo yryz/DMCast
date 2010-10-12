@@ -131,7 +131,7 @@ begin
   connectReqSent := False;
 
   pMsg := @msgBuf;
-  while True do
+  while not Result do
   begin
     if not LongBool(FDmcMode and (DMC_ASYNC or DMC_FEC))
       and not connectReqSent then
@@ -198,7 +198,10 @@ begin
           end;
 
           if LongBool(FDmcMode and (DMC_ASYNC or DMC_FEC)) then
-            Break
+          begin
+            Result := True;
+            Break;
+          end
           else
             Continue;
         end;
