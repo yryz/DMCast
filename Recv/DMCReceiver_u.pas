@@ -64,7 +64,7 @@ begin
 
       //SOCKET OPTION
       sockSendBufSize := 0;             //default
-      sockRecvBufSize := 256 * 1024;    //如果接收Recv者性能较差，建议设置足够的缓冲区，减少丢包
+      sockRecvBufSize := 512 * 1024;    //如果接收Recv者性能较差，建议设置足够的缓冲区，减少丢包
     end;
 
     dmcMode := dmcFixedMode;

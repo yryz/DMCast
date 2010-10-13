@@ -7,7 +7,7 @@ uses
 {$R *.res}
 begin
   Application.Initialize;
-  Application.Title := '文件多播';
+  Application.Title := 'HOU文件多播';
   Application.CreateForm(TfrmCastFile, frmCastFile);
   Application.Run;
 end.

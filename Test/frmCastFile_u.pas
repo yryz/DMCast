@@ -113,7 +113,7 @@ function OnPartsChange(index: Integer; addr: PSockAddrIn;
   lpParam: PClientParam): Boolean;
 
 implementation
-{$DEFINE IS_IMPORT_MODULE}
+//{$DEFINE IS_IMPORT_MODULE}
 {$IFNDEF IS_IMPORT_MODULE}
 uses
   DMCSender_u;
@@ -401,6 +401,11 @@ begin
     edtFile.Text := dlgOpen1.FileName;
 end;
 
+procedure TfrmCastFile.OnAutoStop(var Msg: TMessage);
+begin
+  btnStopClick(nil);
+end;
+
 procedure TfrmCastFile.btnStopClick(Sender: TObject);
 begin
   btnStop.Enabled := False;
@@ -418,11 +423,8 @@ begin
 
   btnStart.Enabled := g_TransState = tsStop;
   btnTrans.Enabled := not btnStart.Enabled;
-  if btnTrans.Enabled then
-  begin
-    btnTrans.Caption := '传输';
-    btnTrans.Tag := 0;
-  end;
+  btnTrans.Caption := '传输';
+  btnTrans.Tag := 0;
 
   //循环模式
   if btnStart.Enabled and chkLoopStart.Checked then
@@ -478,13 +480,8 @@ procedure TfrmCastFile.UpdateOnline;
 begin
   btnTrans.Enabled := (g_TransState = tsNego)
     and (g_NrOnline > 0);
-  stat1.Panels[0].Text := '客户端: '
+  stat1.Panels[0].Text := '接收端: '
     + IntToStr(g_NrOnline) + '/' + IntToStr(lvClient.Items.Count);
-end;
-
-procedure TfrmCastFile.OnAutoStop(var Msg: TMessage);
-begin
-  btnStopClick(nil);
 end;
 
 procedure TfrmCastFile.lbl8Click(Sender: TObject);

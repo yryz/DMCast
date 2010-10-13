@@ -127,7 +127,7 @@ var
   connectReqSent    : Boolean;
 begin
   Result := False;
-  FTransState := tsNego;
+  Self.TransState := tsNego;
   connectReqSent := False;
 
   pMsg := @msgBuf;

@@ -8,11 +8,24 @@ uses
   fileReceiver_u in 'fileReceiver_u.pas';
 
 {$R *.res}
+var
+  s                 : string;
 begin
+  Write(MY_CRLF_LINE);
+  Writeln('㊣HOU文件多播(接收端) v1.0a');
+
   if ParamCount < 1 then
-    MessageBox(0,
-      '请加上参数 "文件保存位置"!'#13#13'DMCReceiver.exe d:\test.rar', '提示', 0)
+  begin
+    write('输入文件保存位置:');
+    readln(s);
+    if s = '' then
+      Exit;
+    Write(MY_CRLF_LINE);
+  end
   else
-    RunReceiver(ParamStr(1));
+    s := ParamStr(1);
+
+  //Start
+  RunReceiver(s);
 end.
 

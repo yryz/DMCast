@@ -125,7 +125,7 @@ Locale=2052
 CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
-FileDescription=文件多播(接收端)
+FileDescription=HOU文件多播(接收端)
 FileVersion=1.0.1.0
 InternalName=
 LegalCopyright=HouSoft

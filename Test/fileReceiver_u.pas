@@ -19,6 +19,9 @@ type
     procedure Terminate; overload;
   end;
 
+const
+  MY_CRLF_LINE      = '©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬©¬'#13#10;
+
 var
   g_Nego            : Pointer;
   g_Fifo            : Pointer;
@@ -32,12 +35,13 @@ var
 
   g_WaitTimer       : THandle;
 
+procedure Writeln(s: string);
 function RunReceiver(const FileName: string): Boolean;
 
 procedure OnTransStateChange(TransState: TTransState);
 procedure DoDisplayStats;
 implementation
-{$DEFINE IS_IMPORT_MODULE}
+//{$DEFINE IS_IMPORT_MODULE}
 {$IFNDEF IS_IMPORT_MODULE}
 uses
   DMCReceiver_u;
@@ -257,11 +261,16 @@ begin
   FileWriter.Free;
 end;
 
+procedure Writeln(s: string);
+begin
+  System.Write(s + #13#10 + MY_CRLF_LINE);
+end;
+
 {$IFDEF CONSOLE}
 
 procedure MyOutLog2(level: TLogLevel; s: string);
 begin
-  Writeln(LOG_MSG_TYPE[level], ': ', s);
+  System.Writeln(LOG_MSG_TYPE[level], ': ', s);
 end;
 {$ENDIF}
 

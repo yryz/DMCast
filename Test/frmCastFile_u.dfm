@@ -3,7 +3,7 @@ object frmCastFile: TfrmCastFile
   Top = 137
   Width = 645
   Height = 398
-  Caption = #25991#20214#22810#25773' v1.0a'
+  Caption = 'HOU'#25991#20214#22810#25773' v1.0a'
   Color = clBtnFace
   Font.Charset = ANSI_CHARSET
   Font.Color = clWindowText
@@ -37,10 +37,11 @@ object frmCastFile: TfrmCastFile
         Caption = 'ID'
       end
       item
-        Caption = #23458#25143#31471
+        Caption = #25509#25910#31471
         Width = 110
       end
       item
+        Alignment = taCenter
         Caption = 'SOCKET'#32531#20914
         Width = 80
       end>
@@ -48,7 +49,7 @@ object frmCastFile: TfrmCastFile
     ReadOnly = True
     RowSelect = True
     SmallImages = ImageList1
-    TabOrder = 1
+    TabOrder = 2
     ViewStyle = vsReport
   end
   object Panel1: TPanel
@@ -78,12 +79,13 @@ object frmCastFile: TfrmCastFile
       OnClick = SpeedButton1Click
     end
     object lbl8: TLabel
-      Left = 552
+      Left = 549
       Top = 21
-      Width = 42
+      Width = 85
       Height = 12
       Cursor = crHandPoint
-      Caption = 'HouSoft'
+      AutoSize = False
+      Caption = 'HouSoft'#26356#22810'..'
       Font.Charset = ANSI_CHARSET
       Font.Color = clBlue
       Font.Height = -12
@@ -146,7 +148,7 @@ object frmCastFile: TfrmCastFile
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
-    TabOrder = 2
+    TabOrder = 3
     object grp1: TGroupBox
       Left = 0
       Top = 0
@@ -192,7 +194,7 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #29255#22823#23567':'
+        Caption = #29255#30340#22359#25968':'
         Transparent = True
       end
       object lblSliceSize: TLabel
@@ -321,7 +323,7 @@ object frmCastFile: TfrmCastFile
         Height = 13
         Alignment = taRightJustify
         AutoSize = False
-        Caption = #21021#22987#29255#22823#23567':'
+        Caption = #21021#22987#29255#22359#25968':'
         Transparent = True
       end
       object lbl7: TLabel
@@ -359,8 +361,8 @@ object frmCastFile: TfrmCastFile
         Top = 57
         Width = 121
         Height = 17
-        Caption = #21160#24577#35843#25972#29255#22823#23567
-        TabOrder = 0
+        Caption = #21160#24577#35843#25972#29255#22359#25968
+        TabOrder = 3
       end
       object seSliceSize: TSpinEdit
         Left = 88
@@ -373,7 +375,7 @@ object frmCastFile: TfrmCastFile
         MinValue = 0
         ParentShowHint = False
         ShowHint = True
-        TabOrder = 1
+        TabOrder = 2
         Value = 0
       end
       object grp4: TGroupBox
@@ -383,7 +385,7 @@ object frmCastFile: TfrmCastFile
         Height = 44
         Align = alBottom
         Caption = #33258#21160#24320#22987
-        TabOrder = 2
+        TabOrder = 6
         object lbl6: TLabel
           Left = 4
           Top = 20
@@ -391,7 +393,7 @@ object frmCastFile: TfrmCastFile
           Height = 13
           Alignment = taRightJustify
           AutoSize = False
-          Caption = #31561#24453#23458#25143#25968':'
+          Caption = #31561#24453#25509#25910#25968':'
           Transparent = True
         end
         object lbl9: TLabel
@@ -441,7 +443,7 @@ object frmCastFile: TfrmCastFile
         Caption = #24320#21551#27969#27169#24335
         ParentShowHint = False
         ShowHint = True
-        TabOrder = 3
+        TabOrder = 1
       end
       object seRetriesUntilDrop: TSpinEdit
         Left = 88
@@ -481,7 +483,7 @@ object frmCastFile: TfrmCastFile
         ItemHeight = 12
         ParentShowHint = False
         ShowHint = False
-        TabOrder = 6
+        TabOrder = 0
       end
     end
   end
@@ -493,7 +495,7 @@ object frmCastFile: TfrmCastFile
     Align = alTop
     ParentShowHint = False
     ShowHint = True
-    TabOrder = 4
+    TabOrder = 1
   end
   object dlgOpen1: TOpenDialog
     Left = 136
@@ -505,7 +507,7 @@ object frmCastFile: TfrmCastFile
   end
   object ImageList1: TImageList
     Left = 56
-    Top = 136
+    Top = 128
     Bitmap = {
       494C010102000300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
