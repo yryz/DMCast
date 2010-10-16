@@ -16,7 +16,6 @@ type
   public
     constructor Create(fileName: string; lpFifo: Pointer);
     destructor Destroy; override;
-    procedure Terminate; overload;
   end;
 
 const
@@ -199,23 +198,23 @@ var
   lpBuf             : PByte;
   dwBytes           : DWORD;
 begin
-  while not Terminated do
+  while True do                         //确保缓冲区数据完全写入
   begin
     dwBytes := 4096;
     lpBuf := DMCDataReadWait(FFifo, dwBytes); //等待数据
-    if (lpBuf = nil) or Terminated then
+    if (lpBuf = nil) then               //data end?
       Break;
 
     dwBytes := FFile.Write(lpBuf^, dwBytes);
+    if Integer(dwBytes) <= 0 then
+    begin
+      Writeln(#13#10'File Write Error: ' + SysErrorMessage(GetLastError));
+      Halt(0);
+      Exit;
+    end;
+
     DMCDataReaded(FFifo, dwBytes);
   end;
-end;
-
-procedure TFileWriter.Terminate;
-begin
-  inherited Terminate;
-  DMCDataReaded(FFifo, 0);
-  WaitFor;
 end;
 
 { End }
@@ -254,7 +253,7 @@ begin
       DoDisplayStats;
   end;
 
-  FileWriter.Terminate;
+  FileWriter.WaitFor;                   //等待缓冲写入完成
 
   DMCNegoWaitEnded(g_Nego);
   DMCNegoDestroy(g_Nego);

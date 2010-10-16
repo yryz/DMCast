@@ -121,11 +121,6 @@ begin
   begin
     TFifo(lpFifo).DataPC.Consumed(dwBytes);
     TFifo(lpFifo).FreeMemPC.Produce(dwBytes);
-  end
-  else                                  //no data
-  begin
-    TFifo(lpFifo).FreeMemPC.MarkEnd;
-    TFifo(lpFifo).DataPC.MarkEnd;
   end;
 end;
 

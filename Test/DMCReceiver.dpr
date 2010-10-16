@@ -12,7 +12,7 @@ var
   s                 : string;
 begin
   Write(MY_CRLF_LINE);
-  Writeln('㊣HOU文件多播(接收端) v1.0a');
+  Writeln('HOU文件多播(接收端) v1.0a');
 
   if ParamCount < 1 then
   begin

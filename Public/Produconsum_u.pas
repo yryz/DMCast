@@ -99,7 +99,7 @@ begin
   if (produced > consumed + FSize) or
     ((produced < consumed) and (produced > consumed - FSize)) then
   begin
-    raise Exception.CreateFmt('Buffer overflow in produce %s: %d > %d[%d]'#10,
+    raise Exception.CreateFmt('Buffer overflow in produce [%s]: %d > %d[%d]'#10,
       [FName, produced, consumed, FSize]);
     Exit;
   end;

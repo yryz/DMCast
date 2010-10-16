@@ -280,7 +280,7 @@ begin
     dwBytes := FFile.Read(lpBuf^, dwBytes);
     DMCDataWrited(FFifo, dwBytes);
 
-  until Terminated or (dwBytes = 0);
+  until Terminated or (Integer(dwBytes) <= 0);
 end;
 
 procedure TFileReader.Terminate;
