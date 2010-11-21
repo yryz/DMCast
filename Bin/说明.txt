@@ -31,9 +31,12 @@
 
 　　“DMCReceiver.exe” 接收端
 　　使用：
-　　　　开始 -> 运行 -> DMCReceiver.exe D:\Test.rar   
+　　　　开始 -> 运行 -> DMCReceiver.exe D:\
 
 <hr>
+
+20101122 v1.0b
+  支持文件夹传输,可方便传输多文件！
 
 20101013 v1.0a
   基本功能完成，正式发布。
