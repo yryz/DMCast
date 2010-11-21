@@ -2,7 +2,7 @@ unit fileReader_u;
 
 interface
 uses
-  Windows, SysUtils, Classes, Config_u, fileProtoc_u, FuncLib;
+  Windows, SysUtils, Classes, Config_u, fileProtoc_u, FuncLib, HouLog_u;
 
 type
   TFileReader = class;
@@ -105,47 +105,57 @@ begin
   Result := False;
   FileStrm := nil;
   try
-    FCurrentFile := FPath + fileName;
-    if Assigned(FOnFilePosition) then
-      FOnFilePosition(Self);
+    try
+      FCurrentFile := FPath + fileName;
+      if Assigned(FOnFilePosition) then
+        FOnFilePosition(Self);
 
-    FileStrm := TFileStream.Create(FCurrentFile, fmShareDenyWrite or fmOpenRead);
+      FileStrm := TFileStream.Create(FCurrentFile, fmShareDenyWrite or fmOpenRead);
 
-    { 文件信息 }
-    dwBytes := SizeOf(TFInfoHead) + Length(fileName) + 1;
-    fileInfo.head.size := dwBytes;
-    fileInfo.head.fileSize := FileStrm.Size;
+      { 文件信息 }
+      dwBytes := SizeOf(TFInfoHead) + Length(fileName) + 1;
+      fileInfo.head.size := dwBytes;
+      fileInfo.head.fileSize := FileStrm.Size;
 
-    lpBuf := DMCDataWriteWait(FFifo, dwBytes); //等待数据缓冲区可写
-    if (dwBytes = 0) or Terminated then
-      Exit;
-
-    //写入缓冲区
-    Move(fileInfo.head, lpBuf^, SizeOf(TFInfoHead));
-    Inc(lpBuf, SizeOf(TFInfoHead));
-    StrPCopy(PChar(lpBuf), fileName);
-    DMCDataWrited(FFifo, fileInfo.head.size);
-
-    { 文件数据 }
-    lastSize := fileInfo.head.fileSize; //剩余大小
-    while not Terminated and (lastSize > 0) do
-    begin
-      dwBytes := 4096;
       lpBuf := DMCDataWriteWait(FFifo, dwBytes); //等待数据缓冲区可写
       if (dwBytes = 0) or Terminated then
-        Break;
+        Exit;
 
-      dwBytes := FileStrm.Read(lpBuf^, dwBytes);
-      Assert(Integer(dwBytes) > 0, 'file read < 0!!!');
+      //写入缓冲区
+      Move(fileInfo.head, lpBuf^, SizeOf(TFInfoHead));
+      Inc(lpBuf, SizeOf(TFInfoHead));
+      StrPCopy(PChar(lpBuf), fileName);
+      DMCDataWrited(FFifo, fileInfo.head.size);
 
-      Dec(lastSize, dwBytes);
-      DMCDataWrited(FFifo, dwBytes);
+      { 文件数据 }
+      lastSize := fileInfo.head.fileSize; //剩余大小
+      while not Terminated and (lastSize > 0) do
+      begin
+        dwBytes := 4096;
+        lpBuf := DMCDataWriteWait(FFifo, dwBytes); //等待数据缓冲区可写
+        if (dwBytes = 0) or Terminated then
+          Break;
+
+        dwBytes := FileStrm.Read(lpBuf^, dwBytes);
+        Assert(Integer(dwBytes) > 0, 'file read < 0!!!');
+
+        Dec(lastSize, dwBytes);
+        DMCDataWrited(FFifo, dwBytes);
+      end;
+
+      Result := lastSize = 0;           // data end ?
+    finally
+      if Assigned(FileStrm) then
+        FileStrm.Free;
     end;
-
-    Result := lastSize = 0;             // data end ?
-  finally
-    if Assigned(FileStrm) then
-      FileStrm.Free;
+  except
+{$IFDEF EN_LOG}
+    on e: Exception do
+    begin
+      Result := GetLastError = $0002;   //系统找不到指定的文件
+      _OutLog2(llError, e.Message);
+    end;
+{$ENDIF}
   end;
 end;
 

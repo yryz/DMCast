@@ -258,9 +258,6 @@ begin
     stat1.Panels[1].Text := '大小统计中...';
     Application.ProcessMessages;
 
-    //    if DirectoryExists(filePath) and (filePath[Length(filePath)] <> '\') then
-    //      filePath := filePath + '\';
-
     dwDirs := 0;
     if FileExists(filePath) then
     begin
