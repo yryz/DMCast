@@ -61,7 +61,7 @@ type
     function StopNegotiate(): Boolean;
     //¿ØÖÆ(ÔÝÍ£/¼ÌÐø)
     procedure WaitForCtrl();
-    procedure TransferCtrl(isGo: Boolean);
+    procedure TransferCtrl(transCtrl: TTransmitCtrl);
 
     //Hello
     function SendHello(streaming: Boolean): Integer;
@@ -397,7 +397,7 @@ function TNegotiate.StopNegotiate: Boolean;
 begin
   Result := not FAbort;
   FAbort := True;
-  TransferCtrl(True);
+  TransferCtrl(tcStart);
   if FXmitRateTimer > 0 then
   begin
     CloseHandle(FXmitRateTimer);
@@ -521,16 +521,18 @@ begin
   WaitForSingleObject(FCtrlWaitHandle, INFINITE);
 end;
 
-procedure TNegotiate.TransferCtrl(isGo: Boolean);
+procedure TNegotiate.TransferCtrl(transCtrl: TTransmitCtrl);
 begin
-  if isGo then
-  begin
-    SetEvent(FCtrlWaitHandle);
-    if Assigned(FConsole) then
-      FConsole.PostPressed;
-  end
-  else
-    ResetEvent(FCtrlWaitHandle);
+  case transCtrl of
+    tcStart:
+      begin
+        SetEvent(FCtrlWaitHandle);
+        if Assigned(FConsole) then
+          FConsole.PostPressed;
+      end;
+    tcPause:
+      ResetEvent(FCtrlWaitHandle);
+  end;
 end;
 
 end.

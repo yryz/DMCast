@@ -4,19 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, MyClasses, WinSock,
-  FuncLib, Config_u, HouLog_u;
-
-type
-  TFileWriter = class(TThread)
-  private
-    FFile: TFileStream;
-    FFifo: Pointer;
-  protected
-    procedure Execute; override;
-  public
-    constructor Create(fileName: string; lpFifo: Pointer);
-    destructor Destroy; override;
-  end;
+  FuncLib, Config_u, HouLog_u, fileWriter_u;
 
 const
   MY_CRLF_LINE      = '┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈'#13#10;
@@ -40,51 +28,7 @@ function RunReceiver(const FileName: string): Boolean;
 procedure OnTransStateChange(TransState: TTransState);
 procedure DoDisplayStats;
 implementation
-//{$DEFINE IS_IMPORT_MODULE}
-{$IFNDEF IS_IMPORT_MODULE}
-uses
-  DMCReceiver_u;
-{$ELSE}
-//API接口
-const
-  DMC_RECEIVER_DLL  = 'DMCReceiver.dll';
-
-  //填充默认配置
-
-procedure DMCConfigFill(var config: TRecvConfig); stdcall;
-  external DMC_RECEIVER_DLL;
-
-//开始会话  OnTransStateChange 可选
-
-function DMCNegoCreate(config: PRecvConfig; OnTransStateChange: TOnTransStateChange;
-  var lpFifo: Pointer): Pointer; stdcall;
-  external DMC_RECEIVER_DLL;
-
-//结束会话
-
-function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
-  external DMC_RECEIVER_DLL;
-
-//等待数据缓冲区可读
-
-function DMCDataReadWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
-  external DMC_RECEIVER_DLL;
-
-//数据已消耗(以从缓冲区取出)
-
-function DMCDataReaded(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
-  external DMC_RECEIVER_DLL;
-
-//等待会话结束(确保安全断开会话)
-
-function DMCNegoWaitEnded(lpNego: Pointer): Boolean; stdcall;
-  external DMC_RECEIVER_DLL;
-
-//统计已经传输Bytes
-
-function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
-  external DMC_RECEIVER_DLL;
-{$ENDIF}
+{$INCLUDE DMCReceiver.inc}
 
 { TReceiverStats }
 
@@ -177,50 +121,28 @@ begin
   g_TransPeriodStart := GetTickCount;
 end;
 
-{ TFileWriter }
-
-constructor TFileWriter.Create(fileName: string; lpFifo: Pointer);
+function ConsoleCtrlHandler(dwSignal: DWORD): BOOL; stdcall;
 begin
-  FFifo := lpFifo;
-  FFile := TFileStream.Create(fileName, fmShareDenyNone or fmCreate);
-  inherited Create(False);
-end;
-
-destructor TFileWriter.Destroy;
-begin
-  if Assigned(FFile) then
-    FFile.Free;
-  inherited;
-end;
-
-procedure TFileWriter.Execute;
-var
-  lpBuf             : PByte;
-  dwBytes           : DWORD;
-begin
-  while True do                         //确保缓冲区数据完全写入
-  begin
-    dwBytes := 4096;
-    lpBuf := DMCDataReadWait(FFifo, dwBytes); //等待数据
-    if (lpBuf = nil) then               //data end?
-      Break;
-
-    dwBytes := FFile.Write(lpBuf^, dwBytes);
-    if Integer(dwBytes) <= 0 then
-    begin
-      Writeln(#13#10'File Write Error: ' + SysErrorMessage(GetLastError));
-      Halt(0);
-      Exit;
-    end;
-
-    DMCDataReaded(FFifo, dwBytes);
+  case dwSignal of
+    CTRL_C_EVENT,                       //用户按下[Ctrl][C]。
+    CTRL_BREAK_EVENT,                   //用户按下[Ctrl][Break]。
+    CTRL_CLOSE_EVENT,                   //用户试图关闭控制台窗口。
+    CTRL_LOGOFF_EVENT,                  //用户试图从系统注销。
+    CTRL_SHUTDOWN_EVENT:                //用户试图关闭计算机。
+      begin
+        if g_Nego <> nil then
+        begin
+          DMCDataReaded(g_Fifo, 0);
+          DMCNegoDestroy(g_Nego);
+          g_Nego := nil;
+        end;
+      end;
   end;
 end;
 
-{ End }
-
 function RunReceiver(const FileName: string): Boolean;
 var
+  p                 : Pointer;
   config            : TRecvConfig;
   FileWriter        : TFileWriter;
 begin
@@ -245,6 +167,7 @@ begin
     Exit;
   end;
 
+  SetConsoleCtrlHandler(@ConsoleCtrlHandler, True);
   FileWriter := TFileWriter.Create(fileName, g_Fifo);
 
   while WaitForSingleObject(g_WaitTimer, 1000) = WAIT_TIMEOUT do
@@ -255,8 +178,10 @@ begin
 
   FileWriter.WaitFor;                   //等待缓冲写入完成
 
+  SetConsoleCtrlHandler(@ConsoleCtrlHandler, False);
   DMCNegoWaitEnded(g_Nego);
   DMCNegoDestroy(g_Nego);
+  g_Nego := nil;
   FileWriter.Free;
 end;
 

@@ -1,9 +1,9 @@
 object frmCastFile: TfrmCastFile
-  Left = 216
-  Top = 137
-  Width = 645
-  Height = 398
-  Caption = 'HOU'#25991#20214#22810#25773' v1.0a'
+  Left = 354
+  Top = 136
+  Width = 667
+  Height = 401
+  Caption = 'HOU'#25991#20214#22810#25773' v1.0b'
   Color = clBtnFace
   Font.Charset = ANSI_CHARSET
   Font.Color = clWindowText
@@ -18,19 +18,24 @@ object frmCastFile: TfrmCastFile
   TextHeight = 12
   object stat1: TStatusBar
     Left = 0
-    Top = 345
-    Width = 637
+    Top = 344
+    Width = 651
     Height = 19
     Panels = <
       item
+        Width = 168
+      end
+      item
         Width = 50
       end>
+    ParentFont = True
+    UseSystemFont = False
   end
   object lvClient: TListView
     Left = 0
-    Top = 74
-    Width = 312
-    Height = 271
+    Top = 70
+    Width = 326
+    Height = 274
     Align = alClient
     Columns = <
       item
@@ -55,32 +60,15 @@ object frmCastFile: TfrmCastFile
   object Panel1: TPanel
     Left = 0
     Top = 0
-    Width = 637
-    Height = 56
+    Width = 651
+    Height = 52
     Align = alTop
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 0
-    object Label1: TLabel
-      Left = 11
-      Top = 19
-      Width = 32
-      Height = 13
-      Alignment = taRightJustify
-      AutoSize = False
-      Caption = #25991#20214
-    end
-    object SpeedButton1: TSpeedButton
-      Left = 240
-      Top = 16
-      Width = 23
-      Height = 22
-      Caption = '...'
-      OnClick = SpeedButton1Click
-    end
     object lbl8: TLabel
       Left = 549
-      Top = 21
+      Top = 22
       Width = 85
       Height = 12
       Cursor = crHandPoint
@@ -95,16 +83,16 @@ object frmCastFile: TfrmCastFile
       OnClick = lbl8Click
     end
     object edtFile: TEdit
-      Left = 48
+      Left = 77
       Top = 16
-      Width = 180
+      Width = 196
       Height = 20
       ImeName = #20013#25991' ('#31616#20307') - '#32654#24335#38190#30424
       TabOrder = 0
     end
     object btnTrans: TButton
-      Left = 336
-      Top = 16
+      Left = 340
+      Top = 15
       Width = 51
       Height = 22
       Caption = #20256#36755
@@ -113,8 +101,8 @@ object frmCastFile: TfrmCastFile
       OnClick = btnTransClick
     end
     object btnStart: TButton
-      Left = 272
-      Top = 16
+      Left = 280
+      Top = 15
       Width = 51
       Height = 22
       Caption = #24320#22987
@@ -123,7 +111,7 @@ object frmCastFile: TfrmCastFile
     end
     object btnStop: TButton
       Left = 400
-      Top = 16
+      Top = 15
       Width = 51
       Height = 22
       Caption = #20572#27490
@@ -139,12 +127,29 @@ object frmCastFile: TfrmCastFile
       Caption = #24490#29615#21551#21160
       TabOrder = 4
     end
+    object cbb1: TComboBox
+      Left = 8
+      Top = 16
+      Width = 65
+      Height = 20
+      Style = csDropDownList
+      ImeName = 'Chinese (Simplified) - US Keyboard'
+      ItemHeight = 12
+      ItemIndex = 0
+      TabOrder = 5
+      Text = #35831#36873#25321
+      OnChange = cbb1Change
+      Items.Strings = (
+        #35831#36873#25321
+        #25991#20214
+        #25991#20214#22841)
+    end
   end
   object pnl1: TPanel
-    Left = 312
-    Top = 74
+    Left = 326
+    Top = 70
     Width = 325
-    Height = 271
+    Height = 274
     Align = alRight
     BevelOuter = bvNone
     ParentBackground = False
@@ -312,7 +317,7 @@ object frmCastFile: TfrmCastFile
       Left = 0
       Top = 108
       Width = 325
-      Height = 163
+      Height = 166
       Align = alClient
       Caption = #35774#32622
       TabOrder = 1
@@ -380,7 +385,7 @@ object frmCastFile: TfrmCastFile
       end
       object grp4: TGroupBox
         Left = 2
-        Top = 117
+        Top = 120
         Width = 321
         Height = 44
         Align = alBottom
@@ -489,8 +494,8 @@ object frmCastFile: TfrmCastFile
   end
   object pb1: TProgressBar
     Left = 0
-    Top = 56
-    Width = 637
+    Top = 52
+    Width = 651
     Height = 18
     Align = alTop
     ParentShowHint = False
@@ -498,6 +503,7 @@ object frmCastFile: TfrmCastFile
     TabOrder = 1
   end
   object dlgOpen1: TOpenDialog
+    Options = [ofEnableSizing]
     Left = 136
     Top = 128
   end

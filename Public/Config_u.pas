@@ -7,18 +7,33 @@ uses
 
 type
   { Transmit State }
-  TTransState = (tsStop, tsNego, tsTransing, tsComplete, tsExcept);
+  TTransState = (
+    tsStop,                             //停止
+    tsNego,                             //开始会话
+    tsTransing,                         //开始传输
+    tsComplete,                         //传输完成
+    tsExcept                            //异常
+    );
   TOnTransStateChange = procedure(TransState: TTransState);
+
+  { Transmit Ctrl }
+  TTransmitCtrl = (
+    tcStart,                            //开始
+    tcPause                             //暂停
+    );
 
   { Participants }
   TClientParam = packed record
-    sockBuf: Integer;
+    sockBuf: Integer;                   //Socket接受缓冲大小(系统底层)
   end;
   PClientParam = ^TClientParam;
 
-  //成员变更(lpParam=nil 断开,否则连接)
-  TOnPartsChange = function(index: Integer; addr: PSockAddrIn;
-    lpParam: PClientParam): Boolean;    //Result = true 同意更改,否则不同意
+  { 成员变更(lpParam=nil 断开,否则连接 }
+  TOnPartsChange = function(
+    index: Integer;                     //成员索引
+    addr: PSockAddrIn;                  //成员地址
+    lpParam: PClientParam               //属性参数
+    ): Boolean;                         //True 同意更改,否则不同意
 
 type
   TDmcFlag = (

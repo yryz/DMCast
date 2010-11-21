@@ -44,8 +44,8 @@ function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall
 //数据生产完成
 function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
 
-//开始/暂停传输(信号)
-function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean; stdcall;
+//开始/暂停/停止传输(信号)
+function DMCTransferCtrl(lpNego: Pointer; transCtrl: TTransmitCtrl): Boolean; stdcall;
 
 //统计片大小
 function DMCStatsSliceSize(lpNego: Pointer): Integer; stdcall;
@@ -147,7 +147,7 @@ begin
       TFifo(lpFifo).FreeMemPC.Consumed(dwBytes);
       TFifo(lpFifo).DataPC.Produce(dwBytes);
     end
-    else                                //no data
+    else                                //no data(data end?)
     begin
       TFifo(lpFifo).FreeMemPC.MarkEnd;
       TFifo(lpFifo).DataPC.MarkEnd;
@@ -162,11 +162,11 @@ begin
   end;
 end;
 
-function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean;
+function DMCTransferCtrl(lpNego: Pointer; transCtrl: TTransmitCtrl): Boolean;
 begin
   Result := True;
   try
-    TSenderThread(lpNego).FNego.TransferCtrl(isGo);
+    TSenderThread(lpNego).FNego.TransferCtrl(transCtrl);
   except on e: Exception do
     begin
       Result := False;

@@ -96,7 +96,7 @@ PackageDLLOutputDir=
 PackageDCPOutputDir=
 SearchPath=..\Include;..\Public;..\Send
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
-Conditionals=
+Conditionals=NO_DLL
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
@@ -114,7 +114,7 @@ IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=1
 MinorVer=0
-Release=1
+Release=2
 Build=0
 Debug=0
 PreRelease=0
@@ -126,7 +126,7 @@ CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
 FileDescription=HOU文件多播(发送端)
-FileVersion=1.0.1.0
+FileVersion=1.0.2.0
 InternalName=
 LegalCopyright=HouSoft
 LegalTrademarks=
@@ -137,9 +137,10 @@ Comments=
 [Excluded Packages]
 d:\program files\borland\delphi7\Bin\dclindy70.bpl=Internet Direct (Indy) for D7 Property and Component Editors
 [HistoryLists\hlConditionals]
-Count=2
-Item0=EN_LOG
-Item1=CONSOLE
+Count=3
+Item0=NO_DLL
+Item1=EN_LOG
+Item2=CONSOLE
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;

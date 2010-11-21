@@ -37,7 +37,7 @@ function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
 
 //等待数据缓冲区可读
 function DMCDataReadWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
-//数据已消耗(以从缓冲区取出)
+//数据已消耗(以从缓冲区取出),dwBytes=0 Disconnect
 function DMCDataReaded(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
 
 //等待会话结束(确保安全断开会话)
@@ -121,6 +121,11 @@ begin
   begin
     TFifo(lpFifo).DataPC.Consumed(dwBytes);
     TFifo(lpFifo).FreeMemPC.Produce(dwBytes);
+  end
+  else
+  begin
+    TFifo(lpFifo).DataPC.MarkEnd;
+    TFifo(lpFifo).FreeMemPC.MarkEnd;
   end;
 end;
 
@@ -204,6 +209,7 @@ begin
     if FNego.TransState <> tsNego then
     begin
       FDp.Close;
+      FNego.SendDisconnect();
       FNego.USocket.Close;
       FIo.Close;
     end

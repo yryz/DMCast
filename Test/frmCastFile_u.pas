@@ -3,26 +3,14 @@ unit frmCastFile_u;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Windows, Messages, SysUtils, Classes, Variants, Graphics, Controls, Forms,
   Dialogs, StdCtrls, XPMan, Buttons, ComCtrls, ExtCtrls, ImgList, WinSock,
-  FuncLib, Config_u, Spin, ShellAPI;
-
-type
-  TFileReader = class(TThread)
-  private
-    FFile: TFileStream;
-    FFifo: Pointer;
-  protected
-    procedure Execute; override;
-  public
-    constructor Create(fileName: string; lpFifo: Pointer);
-    destructor Destroy; override;
-    procedure Terminate; overload;
-  end;
+  FuncLib, Config_u, Spin, ShellAPI, fileReader_u, ShlObj;
 
 const
   WM_UPDATE_ONLINE  = WM_USER + 1;
   WM_AUTO_STOP      = WM_USER + 2;
+  WM_FILE_POSITION  = WM_USER + 3;
 
 type
   TfrmCastFile = class(TForm)
@@ -31,9 +19,7 @@ type
     stat1: TStatusBar;
     lvClient: TListView;
     Panel1: TPanel;
-    Label1: TLabel;
     edtFile: TEdit;
-    SpeedButton1: TSpeedButton;
     btnTrans: TButton;
     ImageList1: TImageList;
     btnStart: TButton;
@@ -72,9 +58,9 @@ type
     lbl11: TLabel;
     lbl12: TLabel;
     lblTotalTime: TLabel;
+    cbb1: TComboBox;
 
     procedure btnStartClick(Sender: TObject);
-    procedure SpeedButton1Click(Sender: TObject);
     procedure btnStopClick(Sender: TObject);
     procedure btnTransClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -82,14 +68,16 @@ type
     procedure tmrStatsTimer(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure SpinEditChange(Sender: TObject);
+    procedure cbb1Change(Sender: TObject);
   private
     FNego: Pointer;
     FFifo: Pointer;
 
     FConfig: TSendConfig;
-    FFileReader: TFileReader;
     procedure UpdateOnline(var Msg: TMessage); message WM_UPDATE_ONLINE;
     procedure OnAutoStop(var Msg: TMessage); message WM_AUTO_STOP;
+
+    procedure OnFilePosition(Sender: TFileReader);
 
     procedure LoadSaveConfig(isLoad: Boolean);
     procedure GetAllInterface;
@@ -100,6 +88,7 @@ type
 var
   frmCastFile       : TfrmCastFile;
   g_FileSize        : Int64;
+  g_FileReader      : TFileReader;
   g_TransState      : TTransState;
 
   g_NrOnline        : Integer;
@@ -113,63 +102,7 @@ function OnPartsChange(index: Integer; addr: PSockAddrIn;
   lpParam: PClientParam): Boolean;
 
 implementation
-//{$DEFINE IS_IMPORT_MODULE}
-{$IFNDEF IS_IMPORT_MODULE}
-uses
-  DMCSender_u;
-{$ELSE}
-//API接口
-const
-  DMC_SENDER_DLL    = 'DMCSender.dll';
-
-  //填充默认配置
-
-procedure DMCConfigFill(var config: TSendConfig); stdcall;
-  external DMC_SENDER_DLL;
-
-//创建会话  OnTransStateChange,OnPartsChange 可选
-
-function DMCNegoCreate(config: PSendConfig;
-  OnTransStateChange: TOnTransStateChange;
-  OnPartsChange: TOnPartsChange;
-  var lpFifo: Pointer): Pointer; stdcall;
-  external DMC_SENDER_DLL;
-
-//结束会话(信号,异步)
-
-function DMCNegoDestroy(lpNego: Pointer): Boolean; stdcall;
-  external DMC_SENDER_DLL;
-
-//等待缓冲区可写
-
-function DMCDataWriteWait(lpFifo: Pointer; var dwBytes: DWORD): Pointer; stdcall;
-  external DMC_SENDER_DLL;
-
-//数据生产完成
-
-function DMCDataWrited(lpFifo: Pointer; dwBytes: DWORD): Boolean; stdcall;
-  external DMC_SENDER_DLL;
-
-//开始/暂停传输(信号)
-
-function DMCTransferCtrl(lpNego: Pointer; isGo: Boolean): Boolean; stdcall;
-  external DMC_SENDER_DLL;
-
-//统计片大小
-
-function DMCStatsSliceSize(lpNego: Pointer): Integer; stdcall;
-  external DMC_SENDER_DLL;
-
-//统计已经传输Bytes
-
-function DMCStatsTotalBytes(lpNego: Pointer): Int64; stdcall;
-  external DMC_SENDER_DLL;
-
-//统计重传Blocks(块)
-
-function DMCStatsBlockRetrans(lpNego: Pointer): Int64; stdcall;
-  external DMC_SENDER_DLL;
-{$ENDIF}
+{$INCLUDE DMCSender.inc}
 
 {$R *.dfm}
 
@@ -189,6 +122,8 @@ begin
       end;
     tsTransing:
       begin
+        g_FileReader.Resume;
+
         g_TransStartTime := GetTickCount;
         g_TransPeriodStart := g_TransStartTime;
         frmCastFile.tmrStats.Enabled := True;
@@ -201,6 +136,7 @@ begin
     tsComplete:
       begin
         frmCastFile.tmrStatsTimer(nil);
+        frmCastFile.stat1.Panels[1].Text := '传输完成.';
 {$IFDEF CONSOLE}
         Writeln('Transfer Complete.');
 {$ENDIF}
@@ -250,48 +186,6 @@ begin
   PostMessage(frmCastFile.Handle, WM_UPDATE_ONLINE, 0, 0);
 end;
 
-{ TFileReader }
-
-constructor TFileReader.Create(fileName: string; lpFifo: Pointer);
-begin
-  FFifo := lpFifo;
-  FFile := TFileStream.Create(fileName, fmShareDenyNone or fmOpenRead);
-  inherited Create(False);
-end;
-
-destructor TFileReader.Destroy;
-begin
-  if Assigned(FFile) then
-    FFile.Free;
-  inherited;
-end;
-
-procedure TFileReader.Execute;
-var
-  lpBuf             : PByte;
-  dwBytes           : DWORD;
-begin
-  repeat
-    dwBytes := 4096;
-    lpBuf := DMCDataWriteWait(FFifo, dwBytes); //等待数据缓冲区可写
-    if (dwBytes = 0) or Terminated then
-      Break;
-
-    dwBytes := FFile.Read(lpBuf^, dwBytes);
-    DMCDataWrited(FFifo, dwBytes);
-
-  until Terminated or (Integer(dwBytes) <= 0);
-end;
-
-procedure TFileReader.Terminate;
-begin
-  inherited Terminate;
-  DMCDataWrited(FFifo, 0);
-  WaitFor;
-end;
-
-{ End }
-
 procedure TfrmCastFile.tmrStatsTimer(Sender: TObject);
 var
   totalBytes, bwBytes: Int64;
@@ -323,6 +217,7 @@ begin
   end;
   if tdiff = 0 then
     tdiff := 1;
+
   //平均带宽统计
   bw := bwBytes * 1000 / tdiff;         // Byte/s
 
@@ -349,17 +244,38 @@ end;
 
 procedure TfrmCastFile.btnStartClick(Sender: TObject);
 var
-  fileName          : string;
+  filePath          : string;
+  dwDirs, dwFiles   : DWORD;
 begin
-  fileName := edtFile.Text;
-  if FileExists(fileName) then
+  filePath := edtFile.Text;
+  if FileExists(filePath) or DirectoryExists(filePath) then
   begin
     pb1.Position := 0;
     pb1.Max := 100;
     lvClient.Clear;
     btnStart.Enabled := False;
 
-    g_FileSize := GetFileSize(PAnsiChar(fileName));
+    stat1.Panels[1].Text := '大小统计中...';
+    Application.ProcessMessages;
+
+    //    if DirectoryExists(filePath) and (filePath[Length(filePath)] <> '\') then
+    //      filePath := filePath + '\';
+
+    dwDirs := 0;
+    if FileExists(filePath) then
+    begin
+      dwFiles := 1;
+      g_FileSize := GetFileSize(PAnsiChar(filePath))
+    end
+    else
+    begin
+      dwFiles := 0;
+      g_FileSize := GetDirectorySize(filePath, dwDirs, dwFiles);
+    end;
+
+    stat1.Panels[1].Text := Format('%d 个文件，%d 个文件夹 , 大小 %s (%d 字节)',
+      [dwFiles, dwDirs, GetSizeKMG(g_FileSize), g_FileSize]);
+
     lblFileSize.Caption := GetSizeKMG(g_FileSize);
     pb1.Hint := '总数据 ' + lblFileSize.Caption;
 
@@ -386,19 +302,16 @@ begin
     FNego := DMCNegoCreate(@FConfig, OnTransStateChange, OnPartsChange, FFifo);
 
     if Assigned(FFifo) then
-      FFileReader := TFileReader.Create(fileName, FFifo);
+    begin
+      g_FileReader := TFileReader.Create(filePath, FFifo);
+      g_FileReader.OnFilePosition := OnFilePosition;
+    end;
 
     btnStop.Enabled := Assigned(FNego) and Assigned(FFifo);
     btnStart.Enabled := not btnStop.Enabled;
   end
   else
     MessageBox(Handle, '文件不存在!', '提示', MB_ICONWARNING);
-end;
-
-procedure TfrmCastFile.SpeedButton1Click(Sender: TObject);
-begin
-  if dlgOpen1.Execute then
-    edtFile.Text := dlgOpen1.FileName;
 end;
 
 procedure TfrmCastFile.OnAutoStop(var Msg: TMessage);
@@ -414,8 +327,8 @@ begin
   if FNego <> nil then
   begin
     // 等待FIFO　线程结束..
-    FFileReader.Terminate;
-    FFileReader.Free;
+    g_FileReader.Terminate;
+    g_FileReader.Free;
 
     DMCNegoDestroy(FNego);
     FNego := nil;
@@ -450,19 +363,19 @@ begin
     case Tag of
       0:
         begin
-          DMCTransferCtrl(FNego, True);
+          DMCTransferCtrl(FNego, tcStart);
           Caption := '暂停';
           Tag := 1;
         end;
       1:
         begin
-          DMCTransferCtrl(FNego, False);
+          DMCTransferCtrl(FNego, tcPause);
           Caption := '继续';
           Tag := 2;
         end;
       2:
         begin
-          DMCTransferCtrl(FNego, True);
+          DMCTransferCtrl(FNego, tcStart);
           Caption := '暂停';
           Tag := 1;
         end;
@@ -563,6 +476,49 @@ procedure TfrmCastFile.SpinEditChange(Sender: TObject);
 begin
   if (TSpinEdit(Sender).Text <> '') and (TSpinEdit(Sender).Value < 0) then
     TSpinEdit(Sender).Value := 0;
+end;
+
+procedure TfrmCastFile.OnFilePosition(Sender: TFileReader);
+begin
+  stat1.Panels[1].Text := Sender.CurrentFile;
+end;
+
+procedure TfrmCastFile.cbb1Change(Sender: TObject);
+var
+  info              : TBrowseinfo;
+  Dir               : array[0..266] of char;
+  Itemid            : PitemIDList;
+begin
+  case cbb1.ItemIndex of
+    1:
+      begin
+        if dlgOpen1.Execute then
+          edtFile.Text := dlgOpen1.FileName;
+        Exit;
+      end;
+
+    2:
+      begin
+        with info do
+        begin
+          hwndOwner := self.Handle;
+          pidlRoot := nil;
+          pszDisplayName := nil;
+          lpszTitle := '请选择需要传输的目录';
+          ulFlags := 0;                 {“0”表示返回控制面板、回收站等目录，“1”则反之}
+          lpfn := nil;
+          lParam := 0;
+          iImage := 0;
+        end;
+
+        ItemId := SHBrowseForFolder(info);
+        if ItemId <> nil then
+        begin
+          SHGetPathFromIDList(ItemId, @Dir);
+          edtFile.Text := string(Dir);
+        end;
+      end;
+  end;
 end;
 
 end.
