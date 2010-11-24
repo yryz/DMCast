@@ -70,7 +70,7 @@ begin
       mcastRdv := nil;
       ttl := 1;
 
-      sockRecvBufSize := 64 * 1024;
+      sockRecvBufSize := 1024 * 1024;
     end;
 
     flags := [];

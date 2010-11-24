@@ -274,10 +274,11 @@ begin
       [dwFiles, dwDirs, GetSizeKMG(g_FileSize), g_FileSize]);
 
     lblFileSize.Caption := GetSizeKMG(g_FileSize);
-    pb1.Hint := '总数据 ' + lblFileSize.Caption;
+    pb1.Hint := Format('总数据 %d 字节', [g_FileSize]);
 
     //默认配置
     DMCConfigFill(FConfig);
+    
     if cbbInterface.ItemIndex > 0 then
       FConfig.net.ifName := PAnsiChar(cbbInterface.Text);
     //FConfig.dmcMode:=dmcAsyncMode;

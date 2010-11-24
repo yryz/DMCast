@@ -2,7 +2,7 @@ unit fileReader_u;
 
 interface
 uses
-  Windows, SysUtils, Classes, Config_u, fileProtoc_u, FuncLib, HouLog_u;
+  Windows, SysUtils, Classes, Forms, Config_u, fileProtoc_u, FuncLib, HouLog_u;
 
 type
   TFileReader = class;
@@ -152,8 +152,14 @@ begin
 {$IFDEF EN_LOG}
     on e: Exception do
     begin
-      Result := GetLastError = $0002;   //系统找不到指定的文件
+      //Result := GetLastError = $0002;   //系统找不到指定的文件
       _OutLog2(llError, e.Message);
+      case Application.MessageBox(PChar(e.Message), '发生异常！',
+        MB_ICONERROR or MB_ABORTRETRYIGNORE) of
+        ID_ABORT: Result := False;
+        ID_RETRY: Result := ReadFile(fileName);
+        ID_IGNORE: Result := True;
+      end;
     end;
 {$ENDIF}
   end;
