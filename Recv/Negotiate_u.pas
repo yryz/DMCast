@@ -210,7 +210,7 @@ begin
         CMD_FEC: Continue;
 {$IFDEF DMC_WARN_ON}
     else
-      OutLog2(llWarn, Format('Unexpected command %-.4x',
+      OutLog2(llWarn, Format('Unexpected command %-.4X',
         [ntohs(pMsg^.opCode)]));
 {$ENDIF}
     end;

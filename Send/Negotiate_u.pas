@@ -426,7 +426,7 @@ begin
     end;
 
 {$IFDEF DMC_MSG_ON}
-  OutLog2(llMsg, Format('Starting transfer.[Capabilities: %-.4x]',
+  OutLog2(llMsg, Format('Starting transfer.[Capabilities: %-.4X]',
     [FCapabilities]));
 
   OutLog2(llMsg, 'Data address ' + inet_ntoa(FUSocket.DataAddr.sin_addr));
