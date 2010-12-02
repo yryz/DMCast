@@ -223,7 +223,7 @@ begin
 
   //重传块统计
   rexmitBlocks := DMCStatsBlockRetrans(FNego);
-  if rexmitBlocks < 1 then
+  if (totalBytes = 0) or (rexmitBlocks < 1) then
     percent := 0
   else
     percent := rexmitBlocks / (totalBytes div FConfig.blockSize);
@@ -278,7 +278,7 @@ begin
 
     //默认配置
     DMCConfigFill(FConfig);
-    
+
     if cbbInterface.ItemIndex > 0 then
       FConfig.net.ifName := PAnsiChar(cbbInterface.Text);
     //FConfig.dmcMode:=dmcAsyncMode;

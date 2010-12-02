@@ -970,9 +970,9 @@ begin
 
     CMD_DISCONNECT:
       begin
-        if Assigned(xmitSlice) then
+        if xmitSlice <> nil then
           xmitSlice.MarkDisconnect(clNo);
-        if Assigned(rexmitSlice) then
+        if rexmitSlice <> nil then
           rexmitSlice.MarkDisconnect(clNo);
         FParts.Remove(clNo);
       end;
@@ -987,7 +987,7 @@ begin
         if Slice <> nil then
           Slice.MarkRetransmit(clNo,
             @msg^.retransmit.map,
-            msg^.retransmit.rxmit);
+            ntohl(msg^.retransmit.rxmit));
       end;
   else
     begin
@@ -1168,7 +1168,7 @@ begin
       waitTime := waitAvg div 1000;
 
 {$IFDEF DMC_DEBUG_ON}
-    OutLog2(llDebug, Format('waitTime:%dms', [waitTime]));
+    OutLog2(llDebug, Format('waitTime: %d ms', [waitTime]));
 {$ENDIF}
     if FRc.IncomingPC.ConsumeAnyWithTimeout(waitTime) > 0 then
     begin                               // 有反馈消息
