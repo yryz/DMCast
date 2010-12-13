@@ -33,9 +33,9 @@ type
     FStatsBlockRetrans: Int64;
 
     { 速率 }
-    FXmitRate: Integer;                 //限制多少 byte/ms
-    FXmitWaitTime: Integer;             //传输等待时间(ms)
-    FXmitLastTick: DWORD;               //最后传输片的时间(ms)(用于计算程序自身开销)
+    FXmitRate: Double;                  //限制多少 byte/us
+    FXmitWaitTime: Integer;             //传输等待时间(us)
+    FXmitLastTick: DWORD;               //最后传输片的时间(us)(用于计算程序自身开销)
     FXmitRateTimer: THandle;
 
     { 传输控制 }
@@ -81,8 +81,8 @@ type
     property StatsBlockRetrans: Int64 read FStatsBlockRetrans write FStatsBlockRetrans;
 
     //速率
-    procedure XmitRateWait(ms: DWORD);
-    property XmitRate: Integer read FXmitRate;
+    procedure XmitRateWait(us: DWORD);
+    property XmitRate: Double read FXmitRate;
     property XmitLastTick: DWORD read FXmitLastTick write FXmitLastTick;
     property XmitWaitTime: Integer read FXmitWaitTime write FXmitWaitTime;
 
@@ -483,7 +483,7 @@ begin
   if kb > 0 then
   begin
     xmitRateBytes := kb * 1024;         //byte/s
-    FXmitRate := xmitRateBytes div 1000; //byte/ms
+    FXmitRate := xmitRateBytes / 1000000; //byte/us
 
     xmitRateBlocks := xmitRateBytes div FConfig.blockSize;
     if xmitRateBlocks < 1 then
@@ -500,18 +500,18 @@ begin
 
     //Timer
     if FXmitRateTimer = 0 then
-      FXmitRateTimer := CreateWaitableTimer(nil, False, nil);
+      FXmitRateTimer := CreateWaitableTimer(nil, True, nil);
   end
   else
     FXmitRate := 0;
 end;
 
-procedure TNegotiate.XmitRateWait(ms: DWORD);
+procedure TNegotiate.XmitRateWait(us: DWORD);
 var
   lpDueTime         : TLargeInteger;
 begin
-  lpDueTime := ms * 1000 * (-10);       //负它代表以 100 纳秒为单位的相对时间
-  SetWaitableTimer(FXmitRateTimer, lpDueTime, 1, nil, nil, True);
+  lpDueTime := us * (-10);              //负它代表以 100 纳秒为单位的相对时间
+  SetWaitableTimer(FXmitRateTimer, lpDueTime, 0, nil, nil, True);
 
   WaitForSingleObject(FXmitRateTimer, INFINITE);
 end;

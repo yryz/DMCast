@@ -373,15 +373,14 @@ begin
   if FNego.XmitRate > 0 then
   begin
     //去除自身开销
-    waitTime := DiffTickCount(FNego.XmitLastTick,
-      GetTickCountUSec div USecPerMSec);
+    waitTime := DiffTickCount(FNego.XmitLastTick, GetTickCountUSec);
 
     if waitTime > 0 then
       waitTime := FNego.XmitWaitTime - waitTime
     else
       waitTime := FNego.XmitWaitTime;
 
-    if (waitTime > 0) and (waitTime < 3 * 1000) {最大3s} then
+    if (waitTime > 0) and (waitTime < 1000000) {最大1s} then
     begin
       FNego.XmitRateWait(waitTime);
     end;
@@ -466,9 +465,9 @@ begin
   begin
     xmitBytes := nrXmitBlocks * FConfig^.blockSize;
 
-    FNego.XmitLastTick := GetTickCountUSec div USecPerMSec;
-    FNego.XmitWaitTime := xmitBytes div FNego.XmitRate {应该用时}
-    - DiffTickCount(startTickUSec div USecPerMSec, FNego.XmitLastTick) {实际用时};
+    FNego.XmitLastTick := GetTickCountUSec;
+    FNego.XmitWaitTime := Trunc(xmitBytes / FNego.XmitRate) {应该用时}
+    - DiffTickCount(startTickUSec, FNego.XmitLastTick) {实际用时};
   end;
 end;
 
