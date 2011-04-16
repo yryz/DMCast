@@ -1018,22 +1018,26 @@ begin
 
     if ReturnValue > 0 then
     begin
-      if (FNego.DmcMode = DMC_STREAM)
-        and (TOpCode(ntohs(pMsg^.opCode)) = CMD_CONNECT_REQ) then
-      begin                             //Stream Mode  CMD_CONNECT_REQ
-        FNego.SendConnectionReply(@client,
-          ntohs(pMsg^.connectReq.capabilities),
-          ntohl(pMsg^.connectReq.rcvbuf));
-      end
+      case TOpCode(ntohs(pMsg^.opCode)) of
+        CMD_CONNECT_REQ:
+          begin
+            if FNego.DmcMode = DMC_STREAM then
+            begin                       //Stream Mode  CMD_CONNECT_REQ
+              FNego.SendConnectionReply(@client,
+                ntohs(pMsg^.connectReq.capabilities),
+                ntohl(pMsg^.connectReq.rcvbuf));
+            end;
+          end;
       else
-      begin
-        clNo := FParts.Lookup(@client);
-        if (clNo < 0) then              { packet from unknown provenance }
-          Continue;
+        begin
+          clNo := FParts.Lookup(@client);
+          if (clNo < 0) then            { packet from unknown provenance }
+            Continue;
 
-        FMsgQueue[pos].clNo := clNo;
-        FFreeSpacePC.Consumed(1);
-        FIncomingPC.Produce(1);
+          FMsgQueue[pos].clNo := clNo;
+          FFreeSpacePC.Consumed(1);
+          FIncomingPC.Produce(1);
+        end;
       end;
     end;
   end;
