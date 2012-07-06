@@ -147,7 +147,6 @@ var
   i                 : Integer;
   first             : Boolean;
 begin
-{$IFDEF CONSOLE}
   first := True;
   Write('[');
   for i := 0 to MAX_CLIENTS - 1 do
@@ -164,7 +163,6 @@ begin
     end;
   end;
   Write(']');
-{$ENDIF}
 end;
 
 procedure TParticipants.PrintSet(d: PByteArray);
@@ -172,7 +170,6 @@ var
   i                 : Integer;
   first             : Boolean;
 begin
-{$IFDEF CONSOLE}
   first := True;
   Write('[');
   for i := 0 to MAX_CLIENTS - 1 do
@@ -189,7 +186,6 @@ begin
     end;
   end;
   Write(']');
-{$ENDIF}
 end;
 
 function TParticipants.Remove(i: Integer): Boolean;

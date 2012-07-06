@@ -380,7 +380,7 @@ begin
     else
       waitTime := FNego.XmitWaitTime;
 
-    if (waitTime > 0) and (waitTime < 1000000) {×î´ó1s} then
+    if (waitTime > 0) then
     begin
       FNego.XmitRateWait(waitTime);
     end;

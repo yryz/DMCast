@@ -142,7 +142,6 @@ end;
 
 function RunReceiver(const FileName: string): Boolean;
 var
-  p                 : Pointer;
   config            : TRecvConfig;
   FileWriter        : TFileWriter;
 begin

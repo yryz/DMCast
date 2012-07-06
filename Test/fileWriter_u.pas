@@ -44,8 +44,6 @@ var
   sFile, sDir       : string;
   fileSize, lastSize: Int64;
   FileStrm          : TFileStream;
-
-  bInvalidSize      : Boolean;
 label
   __readhead;
 begin

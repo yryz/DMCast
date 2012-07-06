@@ -80,7 +80,7 @@ UnsafeType=0
 UnsafeCode=0
 UnsafeCast=0
 [Linker]
-MapFile=0
+MapFile=3
 OutputObjs=0
 ConsoleApp=1
 DebugInfo=0
@@ -94,7 +94,7 @@ OutputDir=..\bin
 UnitOutputDir=z:\
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=..\Include;..\Public;..\Recv
+SearchPath=..\Recv
 Packages=vcl;rtl;vclx;dbrtl;vcldb;vclactnband;inet;inetdb;dsnap;bdertl;vcldbx;visualclx;visualdbclx;vclshlctrls;vclie;xmlrtl;inetdbbde;inetdbxpress;webdsnap;soaprtl;websnap;adortl;dbexpress;dsnapcon;dbxcds;ibxpress;teeui;teedb;tee;dss;indy;VclSmp;dclOfficeXP;qrpt;teeqr;Rave50CLX;Rave50VCL;IntrawebDB_50_70;Intraweb_50_70;EhLibDataDrivers70;EhLib70
 Conditionals=NO_DLL
 DebugSourceDirs=
@@ -115,7 +115,7 @@ AutoIncBuild=0
 MajorVer=1
 MinorVer=0
 Release=2
-Build=0
+Build=1
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=936
 [Version Info Keys]
 CompanyName=HouSoft
 FileDescription=HOU文件多播(接收端)
-FileVersion=1.0.2.0
+FileVersion=1.0.2.1
 InternalName=
 LegalCopyright=HouSoft
 LegalTrademarks=
@@ -135,7 +135,7 @@ ProductName=DMCast
 ProductVersion=1.0.0.0
 Comments=
 [Excluded Packages]
-d:\program files\borland\delphi7\Bin\dclindy70.bpl=Internet Direct (Indy) for D7 Property and Component Editors
+c:\program files (x86)\borland\delphi7\Bin\VclNewlyExt70.bpl=Newly Delphi Features Extented Components(Vista Dialogs, etc.)
 [HistoryLists\hlConditionals]
 Count=3
 Item0=NO_DLL
@@ -145,12 +145,13 @@ Item2=BB_FEATURE_UDPCAST_FEC
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=5
-Item0=..\Include;..\Public;..\Recv
-Item1=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
-Item2=..\Include\win32api
-Item3=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
-Item4=E:\程序\Delphi\HOU网络管理\Include\win32api
+Count=6
+Item0=..\Recv
+Item1=..\Include;..\Public;..\Recv
+Item2=$(DELPHI)\Lib\Debug;..\Include;..\Public;..\Recv
+Item3=..\Include\win32api
+Item4=E:\程序\Delphi\HOU网络管理\Include;E:\程序\Delphi\HOU网络管理\Include\win32api
+Item5=E:\程序\Delphi\HOU网络管理\Include\win32api
 [HistoryLists\hlUnitOutputDirectory]
 Count=1
 Item0=z:\

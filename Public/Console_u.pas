@@ -31,8 +31,10 @@ implementation
 { TConsole }
 
 function WaitForKeyPress(Console: TConsole): Integer;
+{$IFDEF CONSOLE}
 var
   key               : Char;
+{$ENDIF}
 begin
 {$IFDEF CONSOLE}
   read(key);
